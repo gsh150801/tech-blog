@@ -16,6 +16,7 @@ const nav = [
 const { pathname } = Astro.url;
 const isActive = (item: (typeof nav)[number]) =>
   item.exact ? pathname === item.href : pathname.startsWith(item.href);
+const writeHref = withBase('/posts/new/');
 ---
 
 <header class="site-header" transition:name="site-header" id="site-header">
@@ -43,6 +44,10 @@ const isActive = (item: (typeof nav)[number]) =>
     </nav>
 
     <div class="actions">
+      <a class="write-pill" href={writeHref} aria-label="开始写一篇文章" data-nav="write">
+        <Icon name="pen" size={15} />
+        <span class="write-label">写文章</span>
+      </a>
       <button class="search-trigger" data-search-open type="button" aria-label="搜索">
         <Icon name="search" size={17} />
         <kbd>⌘K</kbd>
@@ -64,6 +69,9 @@ const isActive = (item: (typeof nav)[number]) =>
         </a>
       ))
     }
+    <a href={writeHref} class="mm-link mm-write" style={`--i:${nav.length}`}>
+      <Icon name="pen" size={16} /> 写文章
+    </a>
   </nav>
   <div class="mm-foot">
     <button class="btn btn-primary" data-menu-close type="button">
@@ -183,6 +191,36 @@ const isActive = (item: (typeof nav)[number]) =>
     margin-left: 0.5rem;
   }
 
+  .write-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    height: 2.3rem;
+    padding: 0 0.95rem;
+    border-radius: 999px;
+    background: linear-gradient(140deg, var(--accent), var(--accent-deep));
+    color: #fff6e8;
+    font-size: 0.86rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    box-shadow: 0 4px 12px -4px color-mix(in srgb, var(--accent) 55%, transparent);
+    transition: transform 0.3s var(--ease-spring), box-shadow 0.3s, filter 0.2s;
+  }
+
+  .write-pill:hover {
+    transform: translateY(-1.5px);
+    box-shadow: var(--glow), 0 6px 18px -4px color-mix(in srgb, var(--accent) 65%, transparent);
+    filter: brightness(1.05);
+  }
+
+  .write-pill :global(svg) {
+    transition: transform 0.35s var(--ease-spring);
+  }
+
+  .write-pill:hover :global(svg) {
+    transform: rotate(-10deg);
+  }
+
   .search-trigger {
     display: inline-flex;
     align-items: center;
@@ -261,6 +299,20 @@ const isActive = (item: (typeof nav)[number]) =>
     color: var(--accent-ink);
   }
 
+  .mm-write {
+    background: linear-gradient(140deg, var(--accent), var(--accent-deep));
+    color: #fff6e8;
+    margin-top: 0.5rem;
+    font-family: var(--font-body);
+    letter-spacing: 0.05em;
+    font-weight: 600;
+  }
+
+  .mm-write:hover {
+    background: var(--accent-deep);
+    color: #fff6e8;
+  }
+
   .mm-foot {
     margin-top: 1.2rem;
     display: flex;
@@ -278,6 +330,16 @@ const isActive = (item: (typeof nav)[number]) =>
 
     .search-trigger kbd {
       display: none;
+    }
+
+    .write-pill .write-label {
+      display: none;
+    }
+
+    .write-pill {
+      padding: 0;
+      width: 2.3rem;
+      justify-content: center;
     }
   }
 </style>

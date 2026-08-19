@@ -28,6 +28,7 @@ if (SITE.social.rss) socials.push({ href: withBase('/rss.xml'), label: 'RSS 订�
         <a href={withBase('/posts/')}>全部文章</a>
         <a href={withBase('/series/')}>合集</a>
         <a href={withBase('/tags/')}>标签</a>
+        <a href={withBase('/posts/new/')} class="foot-write">写文章 →</a>
         <a href={`https://github.com/${SITE.repo}`} target="_blank" rel="noopener noreferrer">本站源码</a>
       </nav>
 
@@ -95,6 +96,11 @@ if (SITE.social.rss) socials.push({ href: withBase('/rss.xml'), label: 'RSS 订�
 
   .foot-nav a:hover {
     color: var(--accent-ink);
+  }
+
+  .foot-write {
+    color: var(--accent-ink) !important;
+    font-weight: 600;
   }
 
   .foot-social {

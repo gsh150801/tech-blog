@@ -1,0 +1,522 @@
+---
+import Base from '../../layouts/Base.astro';
+import Icon from '../../components/Icon.astro';
+import { SITE } from '../../config';
+import { withBase } from '../../utils/path';
+
+// 在 GitHub Web 上直接创建新文件：URL 自动打开编辑器、目标路径正确、自动 fork（若非自己的仓库）
+const today = new Date().toISOString().slice(0, 10);
+const seedValue = [
+  '---',
+  'title: 我的新文章',
+  'description: 一句话摘要',
+  `date: ${today}`,
+  'tags: [标签1, 标签2]',
+  'draft: true',
+  '',
+  '---',
+  '',
+  '在这里开始写。',
+  '',
+].join('\n');
+const githubNewUrl = `https://github.com/${SITE.repo}/new/main/src/content/posts/?filename=my-new-post.md&value=${encodeURIComponent(seedValue)}`;
+
+const template = `---
+title: 你的文章标题（必填）
+description: 一句话摘要，会显示在列表、搜索和分享卡片里
+date: ${new Date().toISOString().slice(0, 10)}
+updated: （可选）修订日期
+tags: [Markdown, 教程]                # 多个标签用半角逗号隔开
+series: 我的合集                      # 可选：同一 series 名自动归卷
+seriesSlug: my-series-slug            # 可选：合集 URL（建议 ASCII，避免 Pages 404）
+seriesOrder: 1                        # 可选：合集内排序
+pinned: false                         # true 则首页精选位
+draft: true                           # 上线前保持 true，避免被搜索到
+---
+
+# 一级标题
+
+普通段落，**加粗**，*斜体*，~~删除线~~，'行内代码'，[链接](https://astro.build)。
+
+> 引用块适合放金句或注意事项
+
+- 无序列表项
+- 另一项
+  - 嵌套项
+
+1. 有序列表项
+2. 另一项
+
+任务列表：
+
+- [x] 已完成
+- [ ] 待办
+
+\`\`\`ts
+// 代码块自带语言标签 + 一键复制按钮
+interface Post { title: string }
+\`\`\`
+
+| 列 1 | 列 2 |
+| ---- | ---- |
+| a    | b    |
+
+正文脚注[^1]。
+
+[^1]: 脚注会自动渲染在文末。
+`;
+
+const checklist = [
+  '写了 <code>title</code> 和 <code>date</code>（必填）',
+  '加了 <code>description</code>（SEO 与分享卡片依赖它）',
+  '至少打了一个 <code>tag</code>',
+  '如果是合集，填了 <code>series</code> + <code>seriesSlug</code>',
+  '正式发布前把 <code>draft: false</code>',
+];
+---
+
+<Base
+  title="写一篇文章"
+  description="三种方式新建一篇文章：在线、GitHub Web 编辑、本地开发。附 frontmatter 模板与发布前清单。"
+>
+  <div class="container">
+    <header class="page-head reveal">
+      <p class="head-kicker"><Icon name="pen" size={14} /> 写一篇文章</p>
+      <h1 class="page-title">提笔，落稿</h1>
+      <p class="page-desc">三种方式新建一篇文章 —— 最快的是点下面这个按钮。</p>
+    </header>
+
+    <div class="ways">
+      <article class="way way-primary reveal" style="--rd: 0.05s">
+        <div class="way-badge" aria-hidden="true"><Icon name="sparkle" size={14} /></div>
+        <div class="way-body">
+          <h2 class="way-title">方式一 · GitHub 在线新建</h2>
+          <p class="way-desc">
+            点下面的按钮，浏览器会直接打开 GitHub 编辑器，自动定位到
+            <code>src/content/posts/</code> 文件夹，并预填好 frontmatter 模板 —— 改名即可。
+            改完提交 PR，合并后站点会在 1 分钟内自动部署。
+          </p>
+          <div class="way-actions">
+            <a class="btn btn-primary" href={githubNewUrl} target="_blank" rel="noopener noreferrer">
+              <Icon name="github" size={16} /> 打开 GitHub 编辑器
+              <Icon name="arrow-right" size={15} />
+            </a>
+            <span class="way-meta">需要 GitHub 账号 · 无需本地环境</span>
+          </div>
+        </div>
+      </article>
+
+      <article class="way reveal" style="--rd: 0.1s">
+        <h2 class="way-title">方式二 · 本地编辑器</h2>
+        <p class="way-desc">
+          适合长篇、或需要本地预览时。在仓库根目录运行：
+        </p>
+        <pre class="way-code"><code>git clone https://github.com/{SITE.repo}.git
+cd tech-blog
+npm install
+npm run dev                          # http://localhost:4321/tech-blog/
+
+# 新建文章
+cp src/content/posts/markdown-guide.md src/content/posts/my-new-post.md
+# 编辑 my-new-post.md → 改 frontmatter + 正文
+git add -A && git commit -m "post: my new post" && git push</code></pre>
+        <p class="way-meta">需要 Node 22 · 改完即热更新</p>
+      </article>
+
+      <article class="way reveal" style="--rd: 0.15s">
+        <h2 class="way-title">方式三 · VS Code + GitHub.dev</h2>
+        <p class="way-desc">
+          在仓库页面按 <kbd>.</kbd>（句号）打开网页版 VS Code（github.dev），
+          或在本地 VS Code 里克隆仓库，安装 Astro / MDX 扩展。
+        </p>
+      </article>
+    </div>
+
+    <section class="tpl reveal">
+      <header class="sec-head">
+        <h2 class="sec-title">frontmatter 模板</h2>
+        <button class="copy-btn" data-copy-target="#tpl-text" type="button">
+          <Icon name="check" size={14} class="cb-ok" />
+          <span class="cb-label">复制</span>
+        </button>
+      </header>
+      <pre id="tpl-text" class="tpl-code"><code>{template}</code></pre>
+      <p class="tpl-note">
+        所有字段见 <a href={withBase('/posts/markdown-guide/')}>《Markdown 完全指南》</a>。
+        合集 URL 必须用 ASCII slug（在
+        <code>src/content.config.ts</code> 的 schema 里可加一个 <code>seriesSlug</code> 字段，
+        详见前两篇 Astro 系列文章）。
+      </p>
+    </section>
+
+    <section class="ck reveal">
+      <h2 class="sec-title">发布前清单</h2>
+      <ul class="ck-list">
+        {checklist.map((c) => <li class="ck-item"><Icon name="check" size={15} /><span set:html={c} /></li>)}
+      </ul>
+      <p class="ck-note">
+        一切都 OK 之后，<code>draft: false</code> → 推送 → 等 1 分钟 → 网站就更新了。
+        搜索、RSS、合集排序全部自动生效。
+      </p>
+    </section>
+
+    <section class="more reveal">
+      <h2 class="sec-title">延伸阅读</h2>
+      <div class="more-grid">
+        <a class="more-card" href={withBase('/posts/markdown-guide/')}>
+          <Icon name="pen" size={18} />
+          <span class="m-title">Markdown 完全指南</span>
+          <span class="m-desc">本站支持的所有写作姿势</span>
+        </a>
+        <a class="more-card" href={withBase('/series/')}>
+          <Icon name="folder" size={18} />
+          <span class="m-title">合集书架</span>
+          <span class="m-desc">看现有合集怎么写</span>
+        </a>
+        <a class="more-card" href={withBase('/tags/')}>
+          <Icon name="tag" size={18} />
+          <span class="m-title">标签云</span>
+          <span class="m-desc">避免重复造标签</span>
+        </a>
+      </div>
+    </section>
+  </div>
+</Base>
+
+<style>
+  .page-head {
+    padding: 3.2rem 0 2.2rem;
+  }
+
+  .head-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4em;
+    margin: 0;
+    font-size: 0.78rem;
+    letter-spacing: 0.3em;
+    color: var(--ink3);
+    font-weight: 600;
+  }
+
+  .page-title {
+    font-size: clamp(1.9rem, 4.5vw, 2.6rem);
+    margin: 0.5rem 0 0;
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+  }
+
+  .page-title::before {
+    content: '';
+    width: 1.3rem;
+    height: 0.6rem;
+    border-radius: 2px;
+    background: linear-gradient(135deg, var(--accent), var(--gold));
+    transform: skewX(-12deg);
+  }
+
+  .page-desc {
+    margin: 0.7rem 0 0;
+    color: var(--ink3);
+    max-width: 36rem;
+  }
+
+  /* ---------- ways ---------- */
+  .ways {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin: 2rem 0 3rem;
+  }
+
+  .way {
+    position: relative;
+    padding: 1.5rem 1.7rem;
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    background: var(--bg1);
+    transition: border-color 0.25s, box-shadow 0.25s;
+  }
+
+  .way:hover {
+    border-color: var(--line2);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .way-primary {
+    background:
+      radial-gradient(120% 150% at 100% 0%, color-mix(in srgb, var(--accent) 16%, transparent) 0%, transparent 55%),
+      var(--bg1);
+    border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+    box-shadow: var(--shadow-md);
+  }
+
+  .way-badge {
+    position: absolute;
+    right: 1.4rem;
+    top: 1.4rem;
+    display: grid;
+    place-items: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    background: linear-gradient(140deg, var(--accent), var(--accent-deep));
+    color: #fff6e8;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .way-title {
+    font-size: 1.18rem;
+    margin: 0 0 0.4rem;
+  }
+
+  .way-desc {
+    margin: 0 0 1rem;
+    color: var(--ink2);
+    font-size: 0.95rem;
+    line-height: 1.85;
+    max-width: 38rem;
+  }
+
+  .way-desc code,
+  .way-code code,
+  .tpl-note code,
+  .ck-note code {
+    font-family: var(--font-mono);
+    font-size: 0.86em;
+    background: var(--wash);
+    padding: 0.1em 0.4em;
+    border-radius: 5px;
+    color: var(--accent-deep);
+  }
+
+  .way-code,
+  .tpl-code {
+    position: relative;
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    padding: 1rem 1.2rem;
+    background: color-mix(in srgb, var(--code-bg) 95%, transparent);
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    line-height: 1.75;
+    overflow-x: auto;
+    margin: 0;
+    white-space: pre;
+  }
+
+  .way-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .way-meta {
+    font-size: 0.78rem;
+    color: var(--ink3);
+    letter-spacing: 0.06em;
+  }
+
+  /* ---------- 模板 ---------- */
+  .sec-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.9rem;
+  }
+
+  .sec-title {
+    font-size: 1.32rem;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+
+  .sec-title::before {
+    content: '';
+    width: 1.1rem;
+    height: 0.5rem;
+    border-radius: 2px;
+    background: linear-gradient(135deg, var(--accent), var(--gold));
+    transform: skewX(-12deg);
+  }
+
+  .copy-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.35em 0.9em;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    font-size: 0.78rem;
+    color: var(--ink2);
+    background: var(--bg1);
+    transition: border-color 0.2s, color 0.2s, background-color 0.2s, transform 0.2s var(--ease-spring);
+  }
+
+  .copy-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent-ink);
+    background: var(--wash);
+    transform: translateY(-1px);
+  }
+
+  .copy-btn.done {
+    border-color: var(--teal);
+    color: var(--teal);
+  }
+
+  .copy-btn .cb-ok {
+    display: none;
+  }
+
+  .copy-btn.done .cb-ok {
+    display: inline-block;
+  }
+
+  .copy-btn.done .cb-label::before {
+    content: '已复制';
+  }
+
+  .copy-btn.done .cb-label {
+    font-size: 0;
+  }
+
+  .copy-btn.done .cb-label::before {
+    font-size: 0.78rem;
+  }
+
+  .tpl {
+    margin-top: 1.5rem;
+  }
+
+  .tpl-note {
+    margin: 0.9rem 0 0;
+    font-size: 0.82rem;
+    color: var(--ink3);
+    line-height: 1.75;
+  }
+
+  .tpl-note a {
+    color: var(--accent-ink);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  /* ---------- 清单 ---------- */
+  .ck {
+    margin-top: 3rem;
+  }
+
+  .ck-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    max-width: 38rem;
+  }
+
+  .ck-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.7rem;
+    padding: 0.7rem 0.95rem;
+    border: 1px dashed var(--line2);
+    border-radius: var(--r-md);
+    background: color-mix(in srgb, var(--bg1) 70%, transparent);
+    color: var(--ink2);
+    font-size: 0.92rem;
+  }
+
+  .ck-item :global(svg) {
+    flex: none;
+    color: var(--accent);
+    margin-top: 0.15em;
+  }
+
+  .ck-note {
+    margin-top: 1.2rem;
+    color: var(--ink2);
+    font-size: 0.92rem;
+    line-height: 1.85;
+    max-width: 38rem;
+  }
+
+  /* ---------- 延伸 ---------- */
+  .more {
+    margin-top: 3rem;
+    padding-bottom: 2rem;
+  }
+
+  .more-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+    gap: 1rem;
+  }
+
+  .more-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    padding: 1.2rem 1.3rem;
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    background: var(--bg1);
+    transition: transform 0.3s var(--ease-spring), border-color 0.3s, box-shadow 0.3s;
+  }
+
+  .more-card :global(svg) {
+    color: var(--accent-ink);
+  }
+
+  .more-card:hover {
+    transform: translateY(-3px);
+    border-color: color-mix(in srgb, var(--accent) 40%, var(--line2));
+    box-shadow: var(--shadow-md);
+  }
+
+  .m-title {
+    font-weight: 640;
+    font-size: 0.98rem;
+  }
+
+  .m-desc {
+    font-size: 0.78rem;
+    color: var(--ink3);
+  }
+
+  @media (max-width: 640px) {
+    .way-badge {
+      right: 1rem;
+      top: 1rem;
+    }
+  }
+</style>
+
+<script>
+  // 「复制 frontmatter 模板」按钮：事件委托 + 复制 fallback
+  document.addEventListener('click', async (e) => {
+    const btn = (e.target as HTMLElement).closest('[data-copy-target]');
+    if (!btn) return;
+    const target = document.querySelector<HTMLElement>(btn.getAttribute('data-copy-target') ?? '');
+    const text = target?.innerText ?? target?.textContent ?? '';
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      // 老浏览器 fallback
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      ta.remove();
+    }
+    btn.classList.add('done');
+    setTimeout(() => btn.classList.remove('done'), 1600);
+  });
+</script>
