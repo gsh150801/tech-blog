@@ -1,0 +1,1364 @@
+---
+import Base from '../../layouts/Base.astro';
+import Icon from '../../components/Icon.astro';
+import { SITE } from '../../config';
+
+const today = new Date().toISOString().slice(0, 10);
+
+const seed = `---
+title: 
+description: 
+date: ${today}
+tags: []
+series: 
+draft: true
+---
+
+在这里开始写。
+
+# 一级标题
+
+支持 **加粗**、*斜体*、\`行内代码\`、~~删除线~~、[链接](https://astro.build)。
+
+数学公式（KaTeX）：
+
+$$
+e^{i\pi} + 1 = 0
+$$
+
+行内公式 $a^2 + b^2 = c^2$。
+
+表格：
+
+| 列 A | 列 B |
+| ---- | ---- |
+| 1    | 2    |
+
+任务列表：
+
+- [x] 已完成
+- [ ] 待办
+
+代码块：
+
+\`\`\`ts
+function hello(name: string) {
+  return \`Hi, \${name}\`;
+}
+\`\`\`
+
+> 引用块也很友好
+
+\`\`\`
+`;
+---
+
+<Base
+  title="在线编辑器"
+  description="带 LaTeX / 表格 / 拖拽图片的 Markdown 在线编辑器，所见即所得。保存到 GitHub 直接发布。"
+  noindex
+>
+  <div class="editor-shell">
+    <header class="ed-bar" id="ed-bar">
+      <div class="ed-bar-left">
+        <a href="/" class="ed-logo">
+          <Icon name="arrow-left" size={16} /> 拾集
+        </a>
+        <span class="ed-divider" aria-hidden="true">/</span>
+        <input
+          id="ed-filename"
+          class="ed-filename"
+          type="text"
+          value="my-new-post.md"
+          spellcheck="false"
+        />
+        <span class="ed-status" id="ed-status">未保存</span>
+      </div>
+
+      <div class="ed-bar-right">
+        <button class="ed-btn" id="ed-toggle" type="button" aria-label="切换预览">
+          <Icon name="sparkle" size={15} /> 预览
+        </button>
+        <button class="ed-btn" id="ed-settings" type="button" aria-label="设置">
+          <Icon name="external" size={14} /> GitHub 凭据
+        </button>
+        <button class="ed-btn ed-primary" id="ed-save" type="button">
+          <Icon name="check" size={15} /> 保存到 GitHub
+        </button>
+      </div>
+    </header>
+
+    <div class="ed-grid">
+      <section class="ed-pane ed-edit" aria-label="编辑器">
+        <div class="ed-toolbar" role="toolbar" aria-label="格式化工具">
+          <button type="button" data-act="h1" title="一级标题">H1</button>
+          <button type="button" data-act="h2" title="二级标题">H2</button>
+          <button type="button" data-act="h3" title="三级标题">H3</button>
+          <span class="ed-tb-sep" aria-hidden="true"></span>
+          <button type="button" data-act="bold" title="加粗"><strong>B</strong></button>
+          <button type="button" data-act="italic" title="斜体"><em>I</em></button>
+          <button type="button" data-act="strike" title="删除线"><s>S</s></button>
+          <button type="button" data-act="code" title="行内代码"><code>&lt;/&gt;</code></button>
+          <span class="ed-tb-sep" aria-hidden="true"></span>
+          <button type="button" data-act="link" title="插入链接"><Icon name="external" size={13} /></button>
+          <button type="button" data-act="image" title="插入/上传图片"><Icon name="sparkle" size={13} /></button>
+          <button type="button" data-act="table" title="插入表格"><Icon name="folder" size={13} /></button>
+          <button type="button" data-act="math" title="插入 LaTeX 公式">∑</button>
+          <button type="button" data-act="math-block" title="插入公式块">∫</button>
+          <button type="button" data-act="task" title="任务列表"><Icon name="check" size={13} /></button>
+          <button type="button" data-act="quote" title="引用">&gt;</button>
+          <button type="button" data-act="codeblock" title="代码块">{ }</button>
+          <span class="ed-tb-sep" aria-hidden="true"></span>
+          <button type="button" data-act="ul" title="无序列表">•</button>
+          <button type="button" data-act="ol" title="有序列表">1.</button>
+          <span class="ed-tb-sep" aria-hidden="true"></span>
+          <button type="button" data-act="undo" title="撤销"><Icon name="arrow-left" size={13} /></button>
+          <button type="button" data-act="redo" title="重做"><Icon name="arrow-right" size={13} /></button>
+        </div>
+
+        <textarea
+          id="ed-textarea"
+          class="ed-textarea"
+          spellcheck="false"
+          autocapitalize="off"
+          autocomplete="off"
+          autocorrect="off"
+        >{seed}</textarea>
+
+        <input id="ed-image-input" type="file" accept="image/*" hidden />
+      </section>
+
+      <section class="ed-pane ed-preview" aria-label="实时预览">
+        <div id="ed-preview" class="ed-preview-body prose"></div>
+      </section>
+    </div>
+
+    <dialog id="ed-settings-dlg" class="ed-dialog">
+      <div class="ed-dlg-box">
+        <header class="ed-dlg-head">
+          <h2>GitHub 凭据</h2>
+          <button class="ed-icon" type="button" data-close><Icon name="close" size={16} /></button>
+        </header>
+        <p class="ed-dlg-desc">
+          保存文章需要一个有 <code>repo</code> 权限的 GitHub Personal Access Token。
+          Token 仅保存在你的浏览器（localStorage），不会被发送到任何后端。
+          <a href="https://github.com/settings/tokens?type=beta" target="_blank" rel="noopener noreferrer">
+            去申请 <Icon name="external" size={12} />
+          </a>
+        </p>
+        <label class="ed-dlg-field">
+          <span>仓库</span>
+          <input id="ed-repo" type="text" value={SITE.repo} />
+        </label>
+        <label class="ed-dlg-field">
+          <span>分支</span>
+          <input id="ed-branch" type="text" value="main" />
+        </label>
+        <label class="ed-dlg-field">
+          <span>Personal Access Token</span>
+          <input id="ed-token" type="password" placeholder="ghp_…" autocomplete="off" />
+        </label>
+        <div class="ed-dlg-actions">
+          <button class="ed-btn" type="button" data-close>取消</button>
+          <button class="ed-btn ed-primary" id="ed-save-token" type="button">保存</button>
+        </div>
+      </div>
+    </dialog>
+
+    <div class="ed-toast" id="ed-toast" role="status" aria-live="polite" hidden></div>
+  </div>
+</Base>
+
+<style is:global>
+  /* 编辑器是全屏工作区：隐藏站点外壳（本样式表仅在本页面引入） */
+  .site-header,
+  .footer,
+  .back-top {
+    display: none !important;
+  }
+
+  body {
+    overflow: hidden;
+  }
+
+  body::after {
+    display: none !important;
+  }
+
+  /* 编辑器专用深色布局，脱离 paper主题 */
+  .editor-shell {
+    --bg: #1a1612;
+    --panel: #221c14;
+    --line: #2e2519;
+    --ink: #ece2cd;
+    --ink2: #b2a68d;
+    --ink3: #827763;
+    --accent: #ff7448;
+    --accent-deep: #ff8f6b;
+    --wash: #2e2014;
+
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    color: var(--ink);
+    display: flex;
+    flex-direction: column;
+    z-index: 200;
+  }
+
+  .editor-shell header.ed-bar {
+    flex: none;
+    height: 3.4rem;
+    padding: 0 1rem;
+    border-bottom: 1px solid var(--line);
+    background: var(--panel);
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 0.9rem;
+  }
+
+  .ed-bar-left {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .ed-bar-right {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    flex: none;
+  }
+
+  .ed-logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--ink2);
+    padding: 0.35rem 0.7rem;
+    border-radius: 8px;
+    transition: background-color 0.2s, color 0.2s;
+    text-decoration: none;
+  }
+
+  .ed-logo:hover {
+    background: var(--wash);
+    color: var(--accent);
+  }
+
+  .ed-divider {
+    color: var(--ink3);
+  }
+
+  .ed-filename {
+    flex: 1;
+    min-width: 12rem;
+    max-width: 22rem;
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--ink);
+    padding: 0.42rem 0.65rem;
+    border-radius: 6px;
+    font-family: var(--font-mono);
+    font-size: 0.86rem;
+    transition: border-color 0.2s, background-color 0.2s;
+  }
+
+  .ed-filename:hover {
+    border-color: var(--line);
+  }
+
+  .ed-filename:focus {
+    border-color: var(--accent);
+    outline: none;
+    background: var(--bg);
+  }
+
+  .ed-status {
+    flex: none;
+    font-size: 0.76rem;
+    color: var(--ink3);
+    padding: 0.18rem 0.6rem;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    white-space: nowrap;
+  }
+
+  .ed-status.dirty {
+    color: var(--accent);
+    border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+  }
+
+  .ed-status.saved {
+    color: #7fb0a7;
+    border-color: color-mix(in srgb, #7fb0a7 40%, var(--line));
+  }
+
+  .ed-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.42rem;
+    height: 2.15rem;
+    padding: 0 0.85rem;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    background: var(--bg);
+    color: var(--ink2);
+    font-size: 0.84rem;
+    transition: border-color 0.2s, color 0.2s, background-color 0.2s, transform 0.2s var(--ease-spring);
+  }
+
+  .ed-btn:hover {
+    border-color: var(--ink3);
+    color: var(--ink);
+    transform: translateY(-1px);
+  }
+
+  .ed-primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff6e8;
+    font-weight: 600;
+  }
+
+  .ed-primary:hover {
+    background: var(--accent-deep);
+    border-color: var(--accent-deep);
+    color: #fff6e8;
+    box-shadow: 0 4px 14px -3px color-mix(in srgb, var(--accent) 50%, transparent);
+  }
+
+  .ed-icon {
+    display: inline-grid;
+    place-items: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 8px;
+    color: var(--ink2);
+    background: transparent;
+    border: 0;
+    transition: color 0.2s, background-color 0.2s;
+  }
+
+  .ed-icon:hover {
+    color: var(--ink);
+    background: var(--wash);
+  }
+
+  /* 主网格 */
+  .ed-grid {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .editor-shell.preview-only .ed-edit {
+    display: none;
+  }
+
+  .editor-shell.edit-only .ed-preview {
+    display: none;
+  }
+
+  .editor-shell.preview-only .ed-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .editor-shell.edit-only .ed-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ed-pane {
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .ed-edit {
+    border-right: 1px solid var(--line);
+    background: var(--bg);
+  }
+
+  .ed-preview {
+    background: #fbf7ec;
+    color: #27211a;
+    overflow-y: auto;
+  }
+
+  [data-theme='dark'] .ed-preview,
+  .editor-shell[data-theme='dark'] .ed-preview {
+    background: #1a1610;
+    color: #ece2cd;
+  }
+
+  /* 工具栏 */
+  .ed-toolbar {
+    flex: none;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.15rem;
+    padding: 0.5rem 0.7rem;
+    background: var(--panel);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .ed-toolbar button {
+    display: inline-grid;
+    place-items: center;
+    min-width: 2rem;
+    height: 2rem;
+    padding: 0 0.5rem;
+    border-radius: 6px;
+    color: var(--ink2);
+    background: transparent;
+    border: 0;
+    font-size: 0.86rem;
+    font-family: var(--font-mono);
+    transition: background-color 0.15s, color 0.15s, transform 0.15s;
+  }
+
+  .ed-toolbar button:hover {
+    background: var(--wash);
+    color: var(--ink);
+  }
+
+  .ed-toolbar button strong,
+  .ed-toolbar button em,
+  .ed-toolbar button s,
+  .ed-toolbar button code {
+    font-size: 0.86rem;
+  }
+
+  .ed-toolbar button:active {
+    transform: scale(0.95);
+  }
+
+  .ed-tb-sep {
+    width: 1px;
+    height: 1.2rem;
+    background: var(--line);
+    margin: 0 0.25rem;
+  }
+
+  /* 文本编辑区 */
+  .ed-textarea {
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    border: 0;
+    outline: none;
+    resize: none;
+    padding: 1.2rem 1.5rem;
+    background: transparent;
+    color: var(--ink);
+    font-family: 'SF Mono', 'JetBrains Mono', 'Fira Code', ui-monospace, Menlo, Consolas, monospace;
+    font-size: 0.95rem;
+    line-height: 1.85;
+    tab-size: 2;
+    caret-color: var(--accent);
+  }
+
+  .ed-textarea::placeholder {
+    color: var(--ink3);
+  }
+
+  /* 预览区 */
+  .ed-preview-body {
+    flex: 1;
+    padding: 1.6rem 2rem 4rem;
+    max-width: 44rem;
+    margin-inline: auto;
+    font-size: 1.02rem;
+    line-height: 1.95;
+  }
+
+  .ed-preview-body :where(h1, h2, h3) {
+    font-family: 'Fraunces', 'Songti SC', 'Noto Serif SC', serif;
+    margin-block: 1.6em 0.6em;
+  }
+
+  .ed-preview-body h1 {
+    font-size: 1.9rem;
+  }
+
+  .ed-preview-body h2 {
+    font-size: 1.5rem;
+    border-bottom: 1px solid #e3dac4;
+    padding-bottom: 0.35em;
+  }
+
+  .ed-preview-body h3 {
+    font-size: 1.2rem;
+  }
+
+  .ed-preview-body p {
+    margin-block: 0.85em;
+  }
+
+  .ed-preview-body blockquote {
+    margin: 1.4em 0;
+    padding: 0.7em 1.2em;
+    border-left: 3px solid var(--accent);
+    background: rgba(185, 58, 26, 0.07);
+    color: var(--ink2);
+    border-radius: 0 6px 6px 0;
+  }
+
+  .ed-preview-body code:not(pre code) {
+    background: rgba(185, 58, 26, 0.1);
+    color: var(--accent-deep);
+    padding: 0.1em 0.4em;
+    border-radius: 4px;
+    font-size: 0.86em;
+  }
+
+  .ed-preview-body pre {
+    background: #fbf7ec;
+    color: #27211a;
+    padding: 0.9rem 1.1rem;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 0.88rem;
+  }
+
+  [data-theme='dark'] .ed-preview-body pre,
+  .editor-shell .ed-preview-body pre {
+    background: #16120d;
+    color: #ece2cd;
+  }
+
+  .ed-preview-body table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 1em 0;
+    font-size: 0.92em;
+  }
+
+  .ed-preview-body th,
+  .ed-preview-body td {
+    border: 1px solid #e3dac4;
+    padding: 0.5em 0.9em;
+  }
+
+  .ed-preview-body th {
+    background: rgba(185, 58, 26, 0.06);
+    font-family: 'Fraunces', serif;
+    font-weight: 640;
+  }
+
+  .ed-preview-body ul li::marker {
+    color: var(--accent);
+  }
+
+  .ed-preview-body :is(ul, ol) li > input[type='checkbox'] {
+    accent-color: var(--accent);
+    margin-right: 0.4em;
+    transform: translateY(0.1em);
+  }
+
+  .ed-preview-body img {
+    max-width: 100%;
+    border-radius: 8px;
+    box-shadow: 0 4px 16px -4px rgba(0, 0, 0, 0.18);
+  }
+
+  .ed-preview-body hr {
+    border: 0;
+    text-align: center;
+    margin: 2em 0;
+  }
+
+  .ed-preview-body hr::after {
+    content: '· · ·';
+    letter-spacing: 1.4em;
+    color: var(--ink3);
+  }
+
+  .ed-preview-body .katex-display {
+    margin: 1.4em 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  .ed-preview-body .katex {
+    font-size: 1.05em;
+  }
+
+  .ed-preview-body .math-inline,
+  .ed-preview-body .math-block {
+    color: inherit;
+  }
+
+  .ed-preview-body .math-block-fallback {
+    background: rgba(185, 58, 26, 0.06);
+    border: 1px dashed var(--accent);
+    padding: 0.6em 1em;
+    border-radius: 6px;
+    display: block;
+    margin: 1em 0;
+    font-family: var(--font-mono);
+    font-size: 0.92em;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+
+  /* frontmatter 元数据卡片 */
+  .ed-preview-body .fm-card {
+    border: 1px dashed #c9b98f;
+    border-radius: 10px;
+    padding: 0.9rem 1.2rem;
+    margin: 0 0 1.6em;
+    background: rgba(150, 119, 43, 0.06);
+    font-size: 0.88em;
+  }
+
+  .ed-preview-body .fm-title {
+    font-family: 'Fraunces', 'Songti SC', serif;
+    font-weight: 640;
+    color: #96772b;
+    margin-bottom: 0.5em;
+    letter-spacing: 0.05em;
+  }
+
+  .ed-preview-body .fm-row {
+    display: flex;
+    gap: 0.8em;
+    padding: 0.15em 0;
+  }
+
+  .ed-preview-body .fm-key {
+    flex: none;
+    min-width: 7em;
+    font-family: 'SF Mono', Menlo, monospace;
+    color: #96772b;
+    font-weight: 600;
+  }
+
+  .ed-preview-body .fm-val {
+    color: inherit;
+    opacity: 0.85;
+    word-break: break-all;
+  }
+
+  /* 拖拽上传指示 */
+  .editor-shell.drop-active .ed-textarea {
+    background: rgba(255, 116, 72, 0.06);
+  }
+
+  .editor-shell.drop-active::before {
+    content: '松手以上传图片到 GitHub';
+    position: absolute;
+    inset: 5.6rem 0.6rem 0.6rem;
+    border: 2px dashed var(--accent);
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    color: var(--accent);
+    font-size: 1.05rem;
+    font-weight: 600;
+    background: rgba(255, 116, 72, 0.08);
+    pointer-events: none;
+    z-index: 4;
+    animation: ed-pulse 1.2s ease-in-out infinite alternate;
+  }
+
+  @keyframes ed-pulse {
+    from {
+      opacity: 0.7;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  /* 弹窗 */
+  .ed-dialog {
+    border: 0;
+    padding: 0;
+    background: transparent;
+    color: inherit;
+  }
+
+  .ed-dialog::backdrop {
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(6px);
+  }
+
+  .ed-dlg-box {
+    width: min(28rem, calc(100% - 2rem));
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 1.5rem 1.6rem 1.3rem;
+    color: var(--ink);
+    box-shadow: 0 20px 60px -10px rgba(0, 0, 0, 0.5);
+  }
+
+  .ed-dlg-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.6rem;
+  }
+
+  .ed-dlg-head h2 {
+    margin: 0;
+    font-size: 1.1rem;
+  }
+
+  .ed-dlg-desc {
+    font-size: 0.84rem;
+    color: var(--ink2);
+    margin: 0 0 1rem;
+    line-height: 1.7;
+  }
+
+  .ed-dlg-desc a {
+    color: var(--accent);
+    text-decoration: underline;
+  }
+
+  .ed-dlg-desc code {
+    font-family: var(--font-mono);
+    font-size: 0.9em;
+    background: var(--wash);
+    padding: 0.05em 0.35em;
+    border-radius: 4px;
+  }
+
+  .ed-dlg-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    margin-bottom: 0.8rem;
+    font-size: 0.82rem;
+    color: var(--ink2);
+  }
+
+  .ed-dlg-field input {
+    background: var(--bg);
+    border: 1px solid var(--line);
+    color: var(--ink);
+    padding: 0.5rem 0.7rem;
+    border-radius: 6px;
+    font: inherit;
+    font-family: var(--font-mono);
+    font-size: 0.86rem;
+    transition: border-color 0.2s;
+  }
+
+  .ed-dlg-field input:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  .ed-dlg-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+  }
+
+  /* Toast */
+  .ed-toast {
+    position: fixed;
+    bottom: 1.4rem;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--panel);
+    color: var(--ink);
+    border: 1px solid var(--line);
+    padding: 0.7rem 1.2rem;
+    border-radius: 999px;
+    font-size: 0.86rem;
+    box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.4);
+    z-index: 60;
+    opacity: 0;
+    transition: opacity 0.25s, transform 0.25s var(--ease-spring);
+  }
+
+  .ed-toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  .ed-toast.success {
+    border-color: #7fb0a7;
+  }
+
+  .ed-toast.error {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  @media (max-width: 720px) {
+    .ed-grid {
+      grid-template-columns: 1fr;
+      grid-template-rows: 1fr 1fr;
+    }
+
+    .editor-shell.preview-only .ed-edit,
+    .editor-shell.edit-only .ed-preview {
+      display: flex !important;
+    }
+
+    .ed-edit {
+      border-right: 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .ed-filename {
+      max-width: 12rem;
+    }
+
+    .ed-btn span,
+    .ed-btn:not(.ed-primary) :global(svg) + span {
+      display: none;
+    }
+  }
+</style>
+
+<script>
+  // ============================================================
+  // 1) marked (markdown) + KaTeX (LaTeX) + DOMPurify (XSS 防护)
+  //    全部走 ESM CDN，首次加载后被浏览器缓存
+  // ============================================================
+  const CDN = {
+    marked: 'https://cdn.jsdelivr.net/npm/marked@13.0.3/+esm',
+    katexCss: 'https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css',
+    katexJs: 'https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.mjs',
+    purify: 'https://cdn.jsdelivr.net/npm/dompurify@3.1.6/+esm',
+  };
+
+  function injectStyle(href: string) {
+    return new Promise<void>((res) => {
+      if (document.querySelector(`link[href="${href}"]`)) return res();
+      const l = document.createElement('link');
+      l.rel = 'stylesheet';
+      l.href = href;
+      l.onload = () => res();
+      l.onerror = () => res();
+      document.head.appendChild(l);
+    });
+  }
+
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+  async function loadLibs() {
+    const styleTask = injectStyle(CDN.katexCss);
+    const [markedMod, purifyMod, katexMod] = await Promise.all([
+      import(/* @vite-ignore */ CDN.marked),
+      import(/* @vite-ignore */ CDN.purify),
+      import(/* @vite-ignore */ CDN.katexJs),
+    ]);
+    await styleTask;
+
+    // CDN ESM 构建的导出结构不一：兼容 namespace / named / default 三种形态
+    const marked = markedMod?.parse
+      ? markedMod
+      : markedMod?.marked?.parse
+        ? markedMod.marked
+        : markedMod?.default?.parse
+          ? markedMod.default
+          : null;
+    const DOMPurify = purifyMod?.sanitize
+      ? purifyMod
+      : purifyMod?.default?.sanitize
+        ? purifyMod.default
+        : null;
+    const katex = katexMod?.renderToString
+      ? katexMod
+      : katexMod?.default?.renderToString
+        ? katexMod.default
+        : null;
+    if (!marked?.parse) throw new Error('marked 加载异常');
+    if (!DOMPurify?.sanitize) throw new Error('DOMPurify 加载异常');
+    if (!katex?.renderToString) throw new Error('KaTeX 加载异常');
+    (window as any).katex = katex;
+    return { marked, DOMPurify };
+  }
+
+  // ============================================================
+  // 2) 编辑器核心：textarea + 工具栏 + 实时预览
+  // ============================================================
+  const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
+  const ta = $<HTMLTextAreaElement>('ed-textarea');
+  const previewEl = $('ed-preview');
+  const filenameEl = $<HTMLInputElement>('ed-filename');
+  const statusEl = $('ed-status');
+  const shell = document.querySelector<HTMLElement>('.editor-shell')!;
+  const fileInput = $<HTMLInputElement>('ed-image-input');
+  const toast = $('ed-toast');
+
+  let libs: Awaited<ReturnType<typeof loadLibs>> | null = null;
+  let cacheKey = '';
+  let cacheValue = '';
+
+  function setStatus(state: 'dirty' | 'saved' | 'idle', text: string) {
+    statusEl.classList.remove('dirty', 'saved');
+    if (state === 'dirty') statusEl.classList.add('dirty');
+    if (state === 'saved') statusEl.classList.add('saved');
+    statusEl.textContent = text;
+  }
+
+  function showToast(msg: string, kind: 'success' | 'error' | 'info' = 'info') {
+    toast.textContent = msg;
+    toast.classList.remove('success', 'error');
+    if (kind !== 'info') toast.classList.add(kind);
+    toast.hidden = false;
+    requestAnimationFrame(() => toast.classList.add('show'));
+    clearTimeout((toast as any)._t);
+    (toast as any)._t = setTimeout(() => {
+      toast.classList.remove('show');
+      setTimeout(() => (toast.hidden = true), 250);
+    }, 3200);
+  }
+
+  // 行内 / 块级 LaTeX 处理：用占位符保护，避免被 markdown 渲染吃掉
+  function renderMath(text: string, katex: any, DOMPurify: any, marked: any) {
+    const placeholders: string[] = [];
+
+    function protectTex(tex: string, display: boolean): string {
+      const i = placeholders.length;
+      placeholders.push(
+        display
+          ? `<div class="math-block" data-math="${i}" data-display="1">${katex.renderToString(tex, { displayMode: true, throwOnError: false })}</div>`
+          : `<span class="math-inline" data-math="${i}">${katex.renderToString(tex, { displayMode: false, throwOnError: false })}</span>`,
+      );
+      return `\u0000MATH${i}\u0000`;
+    }
+
+    // 块级 $$ … $$
+    text = text.replace(/\$\$([\s\S]+?)\$\$/g, (_m, tex) => protectTex(tex.trim(), true));
+    // 行内 $ … $（要求非空白边界）
+    text = text.replace(/(^|[^\\$])\$([^\n$]+?)\$(?!\d)/g, (_m, pre, tex) => pre + protectTex(tex.trim(), false));
+
+    // markdown → HTML
+    let html = marked.parse(text, {
+      gfm: true,
+      breaks: true,
+    }) as string;
+
+    // 占位符还原
+    html = html.replace(/\u0000MATH(\d+)\u0000/g, (_m, idx) => placeholders[Number(idx)]);
+
+    return DOMPurify.sanitize(html, {
+      ADD_TAGS: ['math', 'mtext', 'mrow', 'mi', 'mo', 'mn', 'msup', 'msub', 'mfrac', 'msqrt', 'mtable', 'mtr', 'mtd'],
+      ADD_ATTR: ['data-math', 'data-display', 'style', 'class'],
+    });
+  }
+
+  // frontmatter 单独渲染成元数据卡片，不进 markdown 正文
+  function splitFrontmatter(text: string): { fm: string; body: string } {
+    const m = text.match(/^---\r?\n([\s\S]*?)\r?\n---\s*(?:\n|$)/);
+    if (!m) return { fm: '', body: text };
+    return { fm: m[1], body: text.slice(m[0].length) };
+  }
+
+  function renderFrontmatter(fm: string): string {
+    if (!fm) return '';
+    const rows = fm
+      .split('\n')
+      .map((line) => {
+        const idx = line.indexOf(':');
+        if (idx < 1) return `<div class="fm-row"><span class="fm-key">${line}</span></div>`;
+        const key = line.slice(0, idx).trim();
+        const val = line.slice(idx + 1).trim();
+        return `<div class="fm-row"><span class="fm-key">${key}</span><span class="fm-val">${val}</span></div>`;
+      })
+      .join('');
+    return `<div class="fm-card"><div class="fm-title">文章信息（frontmatter）</div>${rows}</div>`;
+  }
+
+  async function updatePreview() {
+    if (!libs) return;
+    const text = ta.value;
+    if (text === cacheKey) return;
+    cacheKey = text;
+    const { marked, DOMPurify } = libs;
+    const katex = (window as any).katex;
+    try {
+      const { fm, body } = splitFrontmatter(text);
+      previewEl.innerHTML = renderFrontmatter(fm) + renderMath(body, katex, DOMPurify, marked);
+    } catch (e) {
+      previewEl.innerHTML = `<pre style="color:#b93a1a">渲染失败：${(e as Error).message}</pre>`;
+    }
+    if (text !== cacheValue) setStatus('dirty', '未保存');
+  }
+
+  // ============================================================
+  // 3) 工具栏插入逻辑
+  // ============================================================
+  type Act =
+    | 'h1' | 'h2' | 'h3' | 'bold' | 'italic' | 'strike' | 'code'
+    | 'link' | 'image' | 'table' | 'math' | 'math-block' | 'task' | 'quote'
+    | 'codeblock' | 'ul' | 'ol' | 'undo' | 'redo';
+
+  function wrapSelection(before: string, after = before, placeholder = '') {
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    const sel = ta.value.slice(start, end) || placeholder;
+    const next = ta.value.slice(0, start) + before + sel + after + ta.value.slice(end);
+    ta.value = next;
+    const cursor = start + before.length;
+    ta.focus();
+    ta.setSelectionRange(cursor, cursor + sel.length);
+    updatePreview();
+  }
+
+  function insertAtLineStart(prefix: string) {
+    const start = ta.selectionStart;
+    const before = ta.value.slice(0, start);
+    const lineStart = before.lastIndexOf('\n') + 1;
+    ta.value = ta.value.slice(0, lineStart) + prefix + ta.value.slice(lineStart);
+    ta.setSelectionRange(start + prefix.length, start + prefix.length);
+    ta.focus();
+    updatePreview();
+  }
+
+  function insertBlock(snippet: string) {
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    const lineStart = ta.value.lastIndexOf('\n', start - 1) + 1;
+    const lineEnd = ta.value.indexOf('\n', end);
+    const next = ta.value.slice(0, lineStart) + snippet + '\n' + ta.value.slice(lineEnd === -1 ? ta.value.length : lineEnd + 1);
+    ta.value = next;
+    ta.focus();
+    updatePreview();
+  }
+
+  function act(a: Act) {
+    switch (a) {
+      case 'h1': insertAtLineStart('# '); break;
+      case 'h2': insertAtLineStart('## '); break;
+      case 'h3': insertAtLineStart('### '); break;
+      case 'bold': wrapSelection('**', '**', '加粗'); break;
+      case 'italic': wrapSelection('*', '*', '斜体'); break;
+      case 'strike': wrapSelection('~~', '~~', '删除'); break;
+      case 'code': wrapSelection('`', '`', 'code'); break;
+      case 'link': {
+        const url = prompt('链接 URL：', 'https://');
+        if (!url) return;
+        wrapSelection('[', `](${url})`, '链接文字');
+        break;
+      }
+      case 'image': {
+        fileInput.click();
+        return;
+      }
+      case 'table': {
+        insertBlock(
+          [
+            '| 列 1 | 列 2 | 列 3 |',
+            '| ---- | ---- | ---- |',
+            '| a    | b    | c    |',
+            '| d    | e    | f    |',
+          ].join('\n'),
+        );
+        break;
+      }
+      case 'math': wrapSelection('$', '$', 'a^2+b^2=c^2'); break;
+      case 'math-block': {
+        insertBlock(['$$\\', 'a^2 + b^2 = c^2', '$$'].join('\n'));
+        break;
+      }
+      case 'task': insertBlock('- [x] 已完成\n- [ ] 待办'); break;
+      case 'quote': insertAtLineStart('> '); break;
+      case 'codeblock': {
+        const lang = prompt('语言（可留空）：', 'ts') ?? '';
+        insertBlock('```' + lang + '\n你的代码\n```');
+        break;
+      }
+      case 'ul': insertAtLineStart('- '); break;
+      case 'ol': insertAtLineStart('1. '); break;
+      case 'undo': document.execCommand('undo'); break;
+      case 'redo': document.execCommand('redo'); break;
+    }
+  }
+
+  document.querySelectorAll<HTMLButtonElement>('.ed-toolbar button').forEach((b) => {
+    b.addEventListener('click', (e) => {
+      e.preventDefault();
+      const a = b.dataset.act as Act | undefined;
+      if (a) act(a);
+    });
+  });
+
+  // ============================================================
+  // 4) 拖拽 / 选择文件 → 上传到 GitHub → 插入图片链接
+  // ============================================================
+  async function uploadImage(file: File): Promise<string> {
+    const cfg = readCfg();
+    if (!cfg.token) {
+      showToast('请先设置 GitHub Token（含 repo 权限）', 'error');
+      openSettings();
+      throw new Error('no token');
+    }
+    const ext = (file.name.match(/\.([a-zA-Z0-9]+)$/)?.[1] ?? 'png').toLowerCase();
+    const safeName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    const path = `public/uploads/${safeName}`;
+    const arrayBuf = await file.arrayBuffer();
+    const b64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuf)));
+    showToast('正在上传图片…');
+    const res = await fetch(
+      `https://api.github.com/repos/${cfg.repo}/contents/${path}`,
+      {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${cfg.token}`,
+          'Accept': 'application/vnd.github+json',
+          'X-GitHub-Api-Version': '2022-11-28',
+        },
+        body: JSON.stringify({
+          message: `upload: ${safeName}`,
+          branch: cfg.branch,
+          content: b64,
+        }),
+      },
+    );
+    if (!res.ok) {
+      const txt = await res.text();
+      showToast(`上传失败：${res.status}`, 'error');
+      throw new Error(`upload failed: ${res.status} ${txt.slice(0, 120)}`);
+    }
+    // 用 git history 上的 raw URL 形式
+    return `https://raw.githubusercontent.com/${cfg.repo}/${cfg.branch}/${path}`;
+  }
+
+  fileInput.addEventListener('change', async () => {
+    const f = fileInput.files?.[0];
+    if (!f) return;
+    try {
+      const url = await uploadImage(f);
+      const alt = f.name.replace(/\.[^.]+$/, '');
+      wrapSelection(`![${alt}](`, `)`, url);
+      showToast('图片上传成功 ✓', 'success');
+    } catch {}
+    fileInput.value = '';
+  });
+
+  // 拖拽上传
+  let dragCount = 0;
+  window.addEventListener('dragenter', (e) => {
+    if (!e.dataTransfer?.types.includes('Files')) return;
+    dragCount++;
+    shell.classList.add('drop-active');
+  });
+  window.addEventListener('dragleave', () => {
+    dragCount = Math.max(0, dragCount - 1);
+    if (!dragCount) shell.classList.remove('drop-active');
+  });
+  window.addEventListener('dragover', (e) => {
+    if (e.dataTransfer?.types.includes('Files')) e.preventDefault();
+  });
+  window.addEventListener('drop', async (e) => {
+    if (!e.dataTransfer?.files?.length) return;
+    e.preventDefault();
+    dragCount = 0;
+    shell.classList.remove('drop-active');
+    const files = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith('image/'));
+    for (const f of files) {
+      try {
+        const url = await uploadImage(f);
+        wrapSelection(`![${f.name}](`, `)`, url);
+      } catch {}
+    }
+    showToast(`已上传 ${files.length} 张图片 ✓`, 'success');
+  });
+
+  // ============================================================
+  // 5) 保存到 GitHub（PUT /contents API）
+  // ============================================================
+  interface Cfg { repo: string; branch: string; token: string }
+  function readCfg(): Cfg {
+    return {
+      repo: localStorage.getItem('ed_repo') || '',
+      branch: localStorage.getItem('ed_branch') || 'main',
+      token: localStorage.getItem('ed_token') || '',
+    };
+  }
+
+  async function saveToGitHub() {
+    const cfg = readCfg();
+    if (!cfg.token) {
+      showToast('需要先设置 GitHub Token', 'error');
+      openSettings();
+      return;
+    }
+    let filename = filenameEl.value.trim();
+    if (!filename) {
+      showToast('文件名不能为空', 'error');
+      return;
+    }
+    if (!filename.endsWith('.md')) filename += '.md';
+    if (!/^[\w\-./]+\.md$/.test(filename)) {
+      showToast('文件名只允许字母/数字/中划线/下划线/点和 /', 'error');
+      return;
+    }
+
+    const saveBtn = $('ed-save') as HTMLButtonElement;
+    saveBtn.disabled = true;
+    saveBtn.textContent = '正在提交…';
+
+    try {
+      const path = `src/content/posts/${filename}`;
+      // 检查是否已存在（获取 sha 才能更新）
+      const head = await fetch(
+        `https://api.github.com/repos/${cfg.repo}/contents/${path}?ref=${cfg.branch}`,
+        { headers: { Authorization: `Bearer ${cfg.token}`, Accept: 'application/vnd.github+json' } },
+      );
+      let existingSha: string | undefined;
+      if (head.ok) {
+        const j = await head.json();
+        existingSha = j.sha;
+      }
+
+      const b64 = btoa(unescape(encodeURIComponent(ta.value)));
+      const body: any = {
+        message: existingSha ? `post: revise ${filename}` : `post: new ${filename}`,
+        branch: cfg.branch,
+        content: b64,
+      };
+      if (existingSha) body.sha = existingSha;
+
+      const res = await fetch(
+        `https://api.github.com/repos/${cfg.repo}/contents/${path}`,
+        {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${cfg.token}`,
+            'Accept': 'application/vnd.github+json',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(body),
+        },
+      );
+      if (!res.ok) {
+        const t = await res.text();
+        throw new Error(`HTTP ${res.status} · ${t.slice(0, 140)}`);
+      }
+      const j = await res.json();
+      const htmlUrl = j.content?.html_url ?? `https://github.com/${cfg.repo}/blob/${cfg.branch}/${path}`;
+      setStatus('saved', '已保存 ✓');
+      cacheValue = ta.value;
+      showToast('已提交到 GitHub，等 CI 部署…', 'success');
+      setTimeout(() => {
+        if (confirm('提交成功！打开 GitHub 文件页面？')) {
+          window.open(htmlUrl, '_blank');
+        }
+      }, 600);
+    } catch (e) {
+      showToast(`保存失败：${(e as Error).message}`, 'error');
+    } finally {
+      saveBtn.disabled = false;
+      saveBtn.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m4.5 12.5 5 5L19.5 7"></path></svg> 保存到 GitHub';
+    }
+  }
+
+  $('ed-save').addEventListener('click', saveToGitHub);
+  $('ed-toggle').addEventListener('click', () => {
+    shell.classList.toggle('preview-only');
+    shell.classList.remove('edit-only');
+  });
+
+  // ============================================================
+  // 6) 设置弹窗（GitHub 凭据）
+  // ============================================================
+  const dlg = $<HTMLDialogElement>('ed-settings-dlg');
+  function openSettings() {
+    const cfg = readCfg();
+    $('ed-repo').value = cfg.repo || $('ed-repo').defaultValue;
+    $('ed-branch').value = cfg.branch || 'main';
+    $('ed-token').value = cfg.token;
+    dlg.showModal();
+  }
+  function closeSettings() {
+    dlg.close();
+  }
+  $('ed-settings').addEventListener('click', openSettings);
+  dlg.addEventListener('click', (e) => {
+    if ((e.target as HTMLElement).closest('[data-close]') || e.target === dlg) closeSettings();
+  });
+  $('ed-save-token').addEventListener('click', () => {
+    const repo = $('ed-repo').value.trim();
+    const branch = $('ed-branch').value.trim() || 'main';
+    const token = $('ed-token').value.trim();
+    if (!repo || !token) {
+      showToast('仓库和 Token 都要填', 'error');
+      return;
+    }
+    localStorage.setItem('ed_repo', repo);
+    localStorage.setItem('ed_branch', branch);
+    localStorage.setItem('ed_token', token);
+    closeSettings();
+    showToast('凭据已保存到本机浏览器 ✓', 'success');
+  });
+
+  // ============================================================
+  // 7) 监听输入 & 快捷键
+  // ============================================================
+  ta.addEventListener('input', () => {
+    if (ta.value !== cacheValue) {
+      cacheValue = ta.value;
+      setStatus('dirty', '未保存');
+    }
+    updatePreview();
+  });
+
+  ta.addEventListener('keydown', (e) => {
+    const meta = e.metaKey || e.ctrlKey;
+    if (!meta) return;
+    if (e.key.toLowerCase() === 's') {
+      e.preventDefault();
+      saveToGitHub();
+    } else if (e.key.toLowerCase() === 'b') {
+      e.preventDefault();
+      act('bold');
+    } else if (e.key.toLowerCase() === 'i') {
+      e.preventDefault();
+      act('italic');
+    } else if (e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      act('link');
+    }
+  });
+
+  // tab 插入两个空格
+  ta.addEventListener('keydown', (e) => {
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      const s = ta.selectionStart, en = ta.selectionEnd;
+      ta.value = ta.value.slice(0, s) + '  ' + ta.value.slice(en);
+      ta.setSelectionRange(s + 2, s + 2);
+      updatePreview();
+    }
+  });
+
+  // 防止误关浏览器
+  window.addEventListener('beforeunload', (e) => {
+    if (statusEl.classList.contains('dirty')) {
+      e.preventDefault();
+      e.returnValue = '';
+    }
+  });
+
+  // ============================================================
+  // 启动
+  // ============================================================
+  (async () => {
+    try {
+      libs = await loadLibs();
+      cacheValue = ta.value;
+      setStatus('idle', '就绪');
+      await updatePreview();
+    } catch (e) {
+      previewEl.innerHTML = `<pre style="color:#b93a1a">编辑器库加载失败：${(e as Error).message}\n请检查网络。</pre>`;
+    }
+  })();
+</script>

@@ -16,7 +16,7 @@ const nav = [
 const { pathname } = Astro.url;
 const isActive = (item: (typeof nav)[number]) =>
   item.exact ? pathname === item.href : pathname.startsWith(item.href);
-const writeHref = withBase('/posts/new/');
+const writeHref = withBase('/posts/editor/');
 ---
 
 <header class="site-header" transition:name="site-header" id="site-header">
