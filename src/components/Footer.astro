@@ -1,0 +1,130 @@
+---
+import Seal from './Seal.astro';
+import Icon from './Icon.astro';
+import { SITE } from '../config';
+import { withBase } from '../utils/path';
+
+const year = new Date().getFullYear();
+
+const socials: { href: string; label: string; icon: any }[] = [];
+if (SITE.social.github) socials.push({ href: SITE.social.github, label: 'GitHub', icon: 'github' });
+if (SITE.social.xiaohongshu) socials.push({ href: SITE.social.xiaohongshu, label: '小红书', icon: 'xiaohongshu' });
+if (SITE.social.email) socials.push({ href: `mailto:${SITE.social.email}`, label: '邮箱', icon: 'mail' });
+if (SITE.social.rss) socials.push({ href: withBase('/rss.xml'), label: 'RSS 订阅', icon: 'rss' });
+---
+
+<footer class="footer">
+  <div class="container">
+    <div class="foot-top">
+      <div class="foot-brand">
+        <Seal size={38} />
+        <div>
+          <div class="foot-name">{SITE.title}</div>
+          <div class="foot-tag">{SITE.tagline}</div>
+        </div>
+      </div>
+
+      <nav class="foot-nav" aria-label="页脚导航">
+        <a href={withBase('/posts/')}>全部文章</a>
+        <a href={withBase('/series/')}>合集</a>
+        <a href={withBase('/tags/')}>标签</a>
+        <a href={`https://github.com/${SITE.repo}`} target="_blank" rel="noopener noreferrer">本站源码</a>
+      </nav>
+
+      <div class="foot-social">
+        {
+          socials.map((s) => (
+            <a class="icon-btn" href={s.href} target="_blank" rel="noopener noreferrer" aria-label={s.label} title={s.label}>
+              <Icon name={s.icon} size={20} />
+            </a>
+          ))
+        }
+      </div>
+    </div>
+
+    <div class="foot-bottom">
+      <span>© {year} {SITE.author} · 拾集</span>
+      <span class="foot-meta">
+        用 <a href="https://astro.build" target="_blank" rel="noopener noreferrer">Astro</a> 构建
+        <span class="dot-sep" />托管于 GitHub Pages
+      </span>
+    </div>
+  </div>
+</footer>
+
+<style>
+  .foot-top {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    flex-wrap: wrap;
+  }
+
+  .foot-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+  }
+
+  .foot-name {
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    color: var(--ink2);
+  }
+
+  .foot-tag {
+    font-size: 0.78rem;
+    color: var(--ink3);
+    letter-spacing: 0.06em;
+  }
+
+  .foot-nav {
+    display: flex;
+    gap: 1.2rem;
+    margin-left: auto;
+    flex-wrap: wrap;
+  }
+
+  .foot-nav a {
+    font-size: 0.9rem;
+    color: var(--ink2);
+    transition: color 0.2s;
+  }
+
+  .foot-nav a:hover {
+    color: var(--accent-ink);
+  }
+
+  .foot-social {
+    display: flex;
+    gap: 0.2rem;
+  }
+
+  .foot-bottom {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-top: 1.6rem;
+    padding-top: 1.4rem;
+    border-top: 1px dashed var(--line);
+  }
+
+  .foot-meta a {
+    color: var(--ink2);
+    text-decoration: underline dotted;
+    text-underline-offset: 3px;
+  }
+
+  .foot-meta a:hover {
+    color: var(--accent-ink);
+  }
+
+  @media (max-width: 640px) {
+    .foot-nav {
+      margin-left: 0;
+    }
+  }
+</style>

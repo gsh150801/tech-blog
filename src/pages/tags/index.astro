@@ -1,0 +1,96 @@
+---
+import Base from '../../layouts/Base.astro';
+import { withBase } from '../../utils/path';
+import { getAllPosts, getAllTags } from '../../utils/posts';
+
+const posts = await getAllPosts();
+const tags = getAllTags(posts);
+const max = Math.max(...tags.map(([, c]) => c), 1);
+---
+
+<Base title="标签" description="按标签浏览拾集的全部文章主题。">
+  <div class="container">
+    <header class="page-head reveal">
+      <h1 class="page-title">标签云</h1>
+      <p class="page-desc">共 {tags.length} 个标签 · 点击标签查看相关文章</p>
+    </header>
+
+    <div class="tag-cloud reveal">
+      {
+        tags.map(([tag, count]) => {
+          const scale = 0.82 + (count / max) * 0.65;
+          return (
+            <a
+              class="tag-item"
+              href={withBase(`/tags/${encodeURIComponent(tag)}/`)}
+              style={`--s:${scale.toFixed(2)}`}
+              data-count={count > 1 ? count : undefined}
+            >
+              {tag}
+              {count > 1 && <sup>{count}</sup>}
+            </a>
+          );
+        })
+      }
+    </div>
+  </div>
+</Base>
+
+<style>
+  .page-head {
+    padding: 3.2rem 0 2rem;
+  }
+
+  .page-title {
+    font-size: clamp(1.9rem, 4.5vw, 2.6rem);
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+  }
+
+  .page-title::before {
+    content: '';
+    width: 1.3rem;
+    height: 0.6rem;
+    border-radius: 2px;
+    background: linear-gradient(135deg, var(--accent), var(--gold));
+    transform: skewX(-12deg);
+  }
+
+  .page-desc {
+    margin: 0.7rem 0 0;
+    color: var(--ink3);
+    font-size: 0.92rem;
+  }
+
+  .tag-cloud {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.9rem 1.3rem;
+    padding: 1.6rem 0 3rem;
+    max-width: 46rem;
+  }
+
+  .tag-item {
+    font-family: var(--font-display);
+    font-size: calc(1rem * var(--s));
+    font-weight: 560;
+    color: var(--ink2);
+    transition: color 0.2s, transform 0.25s var(--ease-spring);
+    line-height: 1.4;
+  }
+
+  .tag-item sup {
+    font-family: var(--font-body);
+    font-size: 0.62em;
+    color: var(--accent-ink);
+    margin-left: 0.25em;
+    font-weight: 700;
+  }
+
+  .tag-item:hover {
+    color: var(--accent-ink);
+    transform: translateY(-3px) rotate(-1.5deg);
+  }
+</style>

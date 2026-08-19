@@ -1,0 +1,75 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import PostRow from '../../components/PostRow.astro';
+import Icon from '../../components/Icon.astro';
+import { withBase } from '../../utils/path';
+
+export async function getStaticPaths() {
+  const posts = await getCollection('posts', ({ data }) => !data.draft);
+  const tags = new Set<string>();
+  for (const p of posts) for (const t of p.data.tags) tags.add(t);
+  return [...tags].map((tag) => ({
+    params: { tag: encodeURIComponent(tag) },
+    props: { tag },
+  }));
+}
+
+const { tag } = Astro.props;
+const posts = (await getCollection('posts', ({ data }) => !data.draft))
+  .filter((p) => p.data.tags.includes(tag))
+  .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+---
+
+<Base title={`标签：${tag}`} description={`标签「${tag}」下的全部文章，共 ${posts.length} 篇。`}>
+  <div class="container">
+    <header class="page-head reveal">
+      <p class="head-kicker">
+        <Icon name="tag" size={14} /> 标签
+      </p>
+      <h1 class="page-title">#{tag}</h1>
+      <p class="page-desc">共 {posts.length} 篇文章</p>
+      <a class="back-link u-link" href={withBase('/tags/')}>← 返回标签云</a>
+    </header>
+
+    <div class="post-list">
+      {posts.map((p, i) => <PostRow post={p} style={`--rd:${Math.min(i, 4) * 0.05}s`} />)}
+    </div>
+  </div>
+</Base>
+
+<style>
+  .page-head {
+    padding: 3.2rem 0 2.4rem;
+  }
+
+  .head-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4em;
+    margin: 0;
+    font-size: 0.78rem;
+    letter-spacing: 0.3em;
+    color: var(--ink3);
+    font-weight: 600;
+  }
+
+  .page-title {
+    font-size: clamp(1.8rem, 4.5vw, 2.4rem);
+    margin: 0.5rem 0 0;
+    color: var(--accent-ink);
+  }
+
+  .page-desc {
+    margin: 0.6rem 0 0;
+    color: var(--ink3);
+    font-size: 0.9rem;
+  }
+
+  .back-link {
+    display: inline-block;
+    margin-top: 1rem;
+    font-size: 0.85rem;
+    color: var(--ink2);
+  }
+</style>

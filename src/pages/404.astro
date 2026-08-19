@@ -1,0 +1,73 @@
+---
+import Base from '../layouts/Base.astro';
+import Seal from '../components/Seal.astro';
+import Icon from '../components/Icon.astro';
+import { withBase } from '../utils/path';
+---
+
+<Base title="页面不存在" description="404：此页散佚。" noindex>
+  <section class="nf">
+    <div class="nf-seal reveal">
+      <Seal size={92} />
+      <span class="nf-vert v-text">此页散佚</span>
+    </div>
+    <h1 class="nf-title reveal" style="--rd: 0.08s">四零四</h1>
+    <p class="nf-desc reveal" style="--rd: 0.14s">
+      你要找的这一页，可能在某次整理中散佚了。
+    </p>
+    <div class="nf-actions reveal" style="--rd: 0.2s">
+      <a href={withBase('/')} class="btn btn-primary">
+        回到首页 <Icon name="arrow-right" size={15} />
+      </a>
+      <button class="btn" data-search-open>
+        <Icon name="search" size={15} /> 搜索一下
+      </button>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .nf {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 6rem 1.5rem 4rem;
+  }
+
+  .nf-seal {
+    position: relative;
+    display: grid;
+    place-items: center;
+    margin-bottom: 1.8rem;
+  }
+
+  .nf-vert {
+    position: absolute;
+    right: -2.6rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.85rem;
+    color: var(--ink3);
+    border-block: 2px solid var(--line2);
+    padding: 0.9rem 0.25rem;
+  }
+
+  .nf-title {
+    font-size: clamp(3rem, 9vw, 5rem);
+    letter-spacing: 0.22em;
+    font-weight: 700;
+  }
+
+  .nf-desc {
+    margin: 0.8rem 0 2rem;
+    color: var(--ink2);
+  }
+
+  .nf-actions {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+</style>

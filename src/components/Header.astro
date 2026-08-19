@@ -1,0 +1,301 @@
+---
+import Seal from './Seal.astro';
+import ThemeToggle from './ThemeToggle.astro';
+import Icon from './Icon.astro';
+import { SITE } from '../config';
+import { withBase } from '../utils/path';
+
+const nav = [
+  { href: withBase('/'), label: '首页', exact: true },
+  { href: withBase('/posts/'), label: '文章' },
+  { href: withBase('/series/'), label: '合集' },
+  { href: withBase('/tags/'), label: '标签' },
+  { href: withBase('/about/'), label: '关于' },
+];
+
+const { pathname } = Astro.url;
+const isActive = (item: (typeof nav)[number]) =>
+  item.exact ? pathname === item.href : pathname.startsWith(item.href);
+---
+
+<header class="site-header" transition:name="site-header" id="site-header">
+  <div class="container inner">
+    <a href={withBase('/')} class="brand" aria-label={`${SITE.title} 首页`}>
+      <Seal size={34} class="brand-seal" />
+      <span class="brand-text">
+        <span class="brand-name">{SITE.title}</span>
+        <span class="brand-sub">SH · JOURNAL</span>
+      </span>
+    </a>
+
+    <nav class="site-nav" aria-label="主导航">
+      {
+        nav.map((item) => (
+          <a
+            href={item.href}
+            class:list={['nav-link', { active: isActive(item) }]}
+            aria-current={isActive(item) ? 'page' : undefined}
+          >
+            {item.label}
+          </a>
+        ))
+      }
+    </nav>
+
+    <div class="actions">
+      <button class="search-trigger" data-search-open type="button" aria-label="搜索">
+        <Icon name="search" size={17} />
+        <kbd>⌘K</kbd>
+      </button>
+      <ThemeToggle />
+      <button class="icon-btn menu-btn" data-menu-open type="button" aria-label="打开菜单">
+        <Icon name="menu" size={20} />
+      </button>
+    </div>
+  </div>
+</header>
+
+<dialog id="mobile-menu" class="mobile-menu" aria-label="菜单">
+  <nav aria-label="移动端导航">
+    {
+      nav.map((item, i) => (
+        <a href={item.href} class:list={['mm-link', { active: isActive(item) }]} style={`--i:${i}`}>
+          {item.label}
+        </a>
+      ))
+    }
+  </nav>
+  <div class="mm-foot">
+    <button class="btn btn-primary" data-menu-close type="button">
+      <Icon name="close" size={16} /> 关闭
+    </button>
+  </div>
+</dialog>
+
+<style>
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    height: var(--header-h);
+    background: color-mix(in srgb, var(--bg0) 82%, transparent);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-bottom: 1px solid transparent;
+    transition: border-color 0.3s, background-color 0.3s, box-shadow 0.3s;
+  }
+
+  .site-header.scrolled {
+    border-bottom-color: var(--line);
+    background: color-mix(in srgb, var(--bg0) 92%, transparent);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .inner {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    height: 100%;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    flex: none;
+  }
+
+  .brand-seal {
+    border-radius: 9px;
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.35s var(--ease-spring);
+  }
+
+  .brand:hover .brand-seal {
+    transform: rotate(-6deg) scale(1.06);
+  }
+
+  .brand-text {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.15;
+  }
+
+  .brand-name {
+    font-family: var(--font-display);
+    font-size: 1.22rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+  }
+
+  .brand-sub {
+    font-size: 0.6rem;
+    letter-spacing: 0.32em;
+    color: var(--ink3);
+    font-weight: 600;
+  }
+
+  .site-nav {
+    display: flex;
+    gap: 0.25rem;
+    margin-left: auto;
+  }
+
+  .nav-link {
+    position: relative;
+    padding: 0.45rem 0.85rem;
+    font-size: 0.95rem;
+    color: var(--ink2);
+    border-radius: var(--r-sm);
+    transition: color 0.2s;
+  }
+
+  .nav-link::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: 2px;
+    width: 0;
+    height: 2.5px;
+    border-radius: 2px;
+    background: var(--accent);
+    transform: translateX(-50%);
+    transition: width 0.28s var(--ease-out);
+  }
+
+  .nav-link:hover {
+    color: var(--ink);
+  }
+
+  .nav-link.active {
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  .nav-link.active::after {
+    width: 55%;
+  }
+
+  .actions {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-left: 0.5rem;
+  }
+
+  .search-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    height: 2.3rem;
+    padding: 0 0.55rem 0 0.8rem;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    color: var(--ink3);
+    background: color-mix(in srgb, var(--bg1) 65%, transparent);
+    transition: border-color 0.2s, color 0.2s, box-shadow 0.2s;
+  }
+
+  .search-trigger:hover {
+    border-color: var(--line2);
+    color: var(--ink2);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .search-trigger kbd {
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    padding: 0.1em 0.45em;
+    border: 1px solid var(--line);
+    border-bottom-width: 2px;
+    border-radius: 5px;
+    color: var(--ink3);
+  }
+
+  .menu-btn {
+    display: none;
+  }
+
+  .mobile-menu {
+    margin: auto;
+    width: min(22rem, calc(100% - 2rem));
+    border-radius: var(--r-lg);
+    background: var(--bg1);
+    padding: 1.8rem 1.6rem 1.4rem;
+    box-shadow: var(--shadow-lg);
+  }
+
+  .mobile-menu::backdrop {
+    background: rgb(18 12 5 / 55%);
+    backdrop-filter: blur(6px);
+  }
+
+  .mobile-menu nav {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+
+  .mm-link {
+    padding: 0.7rem 1rem;
+    font-size: 1.08rem;
+    font-family: var(--font-display);
+    letter-spacing: 0.15em;
+    border-radius: var(--r-sm);
+    color: var(--ink2);
+    transition: background-color 0.2s, color 0.2s, transform 0.2s;
+    animation: mm-in 0.45s var(--ease-out) both;
+    animation-delay: calc(var(--i) * 0.05s);
+  }
+
+  @keyframes mm-in {
+    from {
+      opacity: 0;
+      transform: translateX(14px);
+    }
+  }
+
+  .mm-link:hover,
+  .mm-link.active {
+    background: var(--wash);
+    color: var(--accent-ink);
+  }
+
+  .mm-foot {
+    margin-top: 1.2rem;
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  @media (max-width: 860px) {
+    .site-nav {
+      display: none;
+    }
+
+    .menu-btn {
+      display: inline-grid;
+    }
+
+    .search-trigger kbd {
+      display: none;
+    }
+  }
+</style>
+
+<script>
+  // 滚动时加深顶栏（事件委托 + 一次性监听，兼容视图过渡）
+  const header = () => document.getElementById('site-header');
+  const onScroll = () => header()?.classList.toggle('scrolled', window.scrollY > 8);
+  window.addEventListener('scroll', onScroll, { passive: true });
+  document.addEventListener('astro:page-load', onScroll);
+
+  // 移动端菜单
+  document.addEventListener('click', (e) => {
+    const target = e.target as HTMLElement;
+    if (target.closest('[data-menu-open]')) {
+      document.getElementById('mobile-menu')?.showModal();
+    } else if (target.closest('[data-menu-close]')) {
+      (document.getElementById('mobile-menu') as HTMLDialogElement | null)?.close();
+    }
+  });
+</script>

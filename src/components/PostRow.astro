@@ -1,0 +1,202 @@
+---
+/**
+ * 编辑风文章列表行：大日期数字 + 标题 + 摘要
+ */
+import Icon from './Icon.astro';
+import type { Post } from '../utils/posts';
+import { postUrl, readingTime, formatDate } from '../utils/posts';
+
+interface Props {
+  post: Post;
+  showSeries?: boolean;
+  order?: number;
+  style?: string;
+}
+
+const { post, showSeries = true, order, style } = Astro.props;
+const d = post.data.date;
+const reading = readingTime(post);
+---
+
+<article class:list={['post-row', 'reveal']} style={style}>
+  <a href={postUrl(post)} class="row-link" aria-label={post.data.title}>
+    <div class="row-date" aria-hidden="true">
+      {
+        order !== undefined ? (
+          <>
+            <span class="d-day">{String(order).padStart(2, '0')}</span>
+            <span class="d-ym">
+              篇<br />序
+            </span>
+          </>
+        ) : (
+          <>
+            <span class="d-day">{String(d.getDate()).padStart(2, '0')}</span>
+            <span class="d-ym">
+              {d.getFullYear()}
+              <br />
+              {String(d.getMonth() + 1).padStart(2, '0')}月
+            </span>
+          </>
+        )
+      }
+    </div>
+
+    <div class="row-main">
+      <h3 class="row-title">{post.data.title}</h3>
+      {
+        post.data.description && (
+          <p class="row-desc">{post.data.description}</p>
+        )
+      }
+      <div class="row-meta">
+        {
+          showSeries && post.data.series && (
+            <span class="chip chip-solid">
+              <Icon name="folder" size={12} />
+              {post.data.series}
+            </span>
+          )
+        }
+        {post.data.tags.map((t) => <span class="chip">{t}</span>)}
+        <span class="meta-item">
+          <Icon name="clock" size={13} /> {reading} 分钟
+        </span>
+      </div>
+    </div>
+
+    <span class="row-arrow" aria-hidden="true">
+      <Icon name="arrow-right" size={20} />
+    </span>
+  </a>
+</article>
+
+<style>
+  .post-row {
+    border-bottom: 1px solid var(--line);
+  }
+
+  .post-row:first-child {
+    border-top: 1px solid var(--line);
+  }
+
+  .row-link {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 1.6rem;
+    padding: 1.35rem 0.9rem;
+    border-radius: var(--r-md);
+    transition: background-color 0.25s var(--ease-out);
+  }
+
+  .row-link:hover {
+    background: color-mix(in srgb, var(--wash) 55%, transparent);
+  }
+
+  .row-date {
+    display: flex;
+    align-items: baseline;
+    gap: 0.45rem;
+    padding-right: 1.2rem;
+    border-right: 1px solid var(--line2);
+    min-width: 5.2rem;
+  }
+
+  .d-day {
+    font-family: var(--font-display);
+    font-size: 2.15rem;
+    font-weight: 560;
+    line-height: 1;
+    color: var(--ink2);
+    font-variant-numeric: tabular-nums;
+    transition: color 0.25s;
+  }
+
+  .row-link:hover .d-day {
+    color: var(--accent);
+  }
+
+  .d-ym {
+    font-size: 0.66rem;
+    line-height: 1.45;
+    letter-spacing: 0.1em;
+    color: var(--ink3);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .row-main {
+    min-width: 0;
+  }
+
+  .row-title {
+    font-size: 1.18rem;
+    font-weight: 640;
+    margin: 0;
+    display: inline;
+    background-image: linear-gradient(var(--accent), var(--accent));
+    background-repeat: no-repeat;
+    background-position: 0 100%;
+    background-size: 0% 2px;
+    transition: background-size 0.4s var(--ease-out);
+    padding-bottom: 2px;
+  }
+
+  .row-link:hover .row-title {
+    background-size: 100% 2px;
+  }
+
+  .row-desc {
+    margin: 0.4rem 0 0.55rem;
+    font-size: 0.88rem;
+    line-height: 1.7;
+    color: var(--ink3);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .row-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    flex-wrap: wrap;
+  }
+
+  .meta-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3em;
+    font-size: 0.76rem;
+    color: var(--ink3);
+    white-space: nowrap;
+  }
+
+  .row-arrow {
+    color: var(--ink3);
+    opacity: 0;
+    transform: translateX(-8px);
+    transition: opacity 0.3s, transform 0.3s var(--ease-out), color 0.3s;
+  }
+
+  .row-link:hover .row-arrow {
+    opacity: 1;
+    transform: none;
+    color: var(--accent);
+  }
+
+  @media (max-width: 640px) {
+    .row-link {
+      grid-template-columns: 1fr auto;
+    }
+
+    .row-date {
+      display: none;
+    }
+
+    .row-title {
+      font-size: 1.08rem;
+    }
+  }
+</style>

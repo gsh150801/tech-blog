@@ -1,0 +1,246 @@
+---
+/**
+ * 文章页内的合集导航：展示整个合集的篇目与上/下篇
+ */
+import Icon from './Icon.astro';
+import { withBase } from '../utils/path';
+import { postUrl, type Post } from '../utils/posts';
+
+interface Props {
+  name: string;
+  posts: Post[];
+  currentId: string;
+  slug: string;
+}
+
+const { name, posts, currentId, slug } = Astro.props;
+const index = posts.findIndex((p) => p.id === currentId);
+const prev = index > 0 ? posts[index - 1] : null;
+const next = index >= 0 && index < posts.length - 1 ? posts[index + 1] : null;
+---
+
+<section class="series-box reveal" aria-label={`合集：${name}`}>
+  <header class="sb-head">
+    <a class="sb-title" href={withBase(`/series/${slug}/`)}>
+      <Icon name="folder" size={15} />
+      <span>合集 · {name}</span>
+    </a>
+    <span class="sb-count">共 {posts.length} 篇</span>
+  </header>
+
+  <ol class="sb-list">
+    {
+      posts.map((p, i) => (
+        <li class:list={['sb-item', { current: p.id === currentId }]}>
+          {p.id === currentId ? (
+            <span class="sb-link cur">
+              <span class="sb-no">{String(i + 1).padStart(2, '0')}</span>
+              <span class="sb-text">{p.data.title}</span>
+              <span class="sb-badge">本篇</span>
+            </span>
+          ) : (
+            <a class="sb-link" href={postUrl(p)}>
+              <span class="sb-no">{String(i + 1).padStart(2, '0')}</span>
+              <span class="sb-text">{p.data.title}</span>
+            </a>
+          )}
+        </li>
+      ))
+    }
+  </ol>
+
+  {
+    (prev || next) && (
+      <div class="sb-nav">
+        {prev ? (
+          <a class="sb-nav-link prev" href={postUrl(prev)}>
+            <Icon name="arrow-left" size={15} />
+            <span class="sb-nav-text">
+              <span class="sb-nav-label">上一篇</span>
+              <span class="sb-nav-title">{prev.data.title}</span>
+            </span>
+          </a>
+        ) : (
+          <span />
+        )}
+        {next ? (
+          <a class="sb-nav-link next" href={postUrl(next)}>
+            <span class="sb-nav-text">
+              <span class="sb-nav-label">下一篇</span>
+              <span class="sb-nav-title">{next.data.title}</span>
+            </span>
+            <Icon name="arrow-right" size={15} />
+          </a>
+        ) : (
+          <span />
+        )}
+      </div>
+    )
+  }
+</section>
+
+<style>
+  .series-box {
+    margin-top: 3rem;
+    border: 1px solid var(--line2);
+    border-radius: var(--r-lg);
+    background:
+      linear-gradient(150deg, var(--wash), transparent 42%),
+      var(--bg1);
+    padding: 1.4rem 1.5rem 1.2rem;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .sb-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding-bottom: 0.9rem;
+    border-bottom: 1px dashed var(--line2);
+  }
+
+  .sb-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-family: var(--font-display);
+    font-weight: 680;
+    font-size: 1.02rem;
+    letter-spacing: 0.06em;
+    transition: color 0.2s;
+  }
+
+  .sb-title:hover {
+    color: var(--accent-ink);
+  }
+
+  .sb-count {
+    font-size: 0.76rem;
+    color: var(--ink3);
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+  }
+
+  .sb-list {
+    list-style: none;
+    margin: 0.6rem 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .sb-link {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    padding: 0.55rem 0.75rem;
+    border-radius: var(--r-sm);
+    font-size: 0.93rem;
+    color: var(--ink2);
+    transition: background-color 0.2s, color 0.2s, transform 0.2s;
+  }
+
+  a.sb-link:hover {
+    background: color-mix(in srgb, var(--wash) 80%, transparent);
+    color: var(--ink);
+    transform: translateX(3px);
+  }
+
+  .sb-no {
+    font-family: var(--font-display);
+    font-size: 0.8rem;
+    color: var(--ink3);
+    font-variant-numeric: tabular-nums;
+    min-width: 1.7em;
+  }
+
+  .sb-text {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .sb-badge {
+    flex: none;
+    font-size: 0.68rem;
+    padding: 0.1em 0.6em;
+    border-radius: 999px;
+    background: var(--accent);
+    color: #fff6e8;
+    letter-spacing: 0.1em;
+  }
+
+  .sb-item.current .sb-link.cur {
+    color: var(--accent-ink);
+    font-weight: 640;
+    background: color-mix(in srgb, var(--accent) 9%, transparent);
+  }
+
+  .sb-item.current .sb-no {
+    color: var(--accent);
+    font-weight: 700;
+  }
+
+  .sb-nav {
+    display: flex;
+    gap: 0.8rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px dashed var(--line2);
+  }
+
+  .sb-nav-link {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.7rem 0.9rem;
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    background: var(--bg1);
+    transition: border-color 0.2s, box-shadow 0.25s, transform 0.25s var(--ease-spring);
+  }
+
+  .sb-nav-link:hover {
+    border-color: var(--accent);
+    box-shadow: var(--shadow-sm);
+    transform: translateY(-2px);
+  }
+
+  .sb-nav-link.next {
+    justify-content: flex-end;
+    text-align: right;
+  }
+
+  .sb-nav-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .sb-nav-label {
+    font-size: 0.68rem;
+    letter-spacing: 0.18em;
+    color: var(--ink3);
+  }
+
+  .sb-nav-title {
+    font-size: 0.88rem;
+    color: var(--ink);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  @media (max-width: 640px) {
+    .sb-nav {
+      flex-direction: column;
+    }
+
+    .sb-nav-link.next {
+      text-align: left;
+      flex-direction: row-reverse;
+    }
+  }
+</style>

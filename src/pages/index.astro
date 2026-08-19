@@ -1,0 +1,479 @@
+---
+import Base from '../layouts/Base.astro';
+import Icon from '../components/Icon.astro';
+import FeatureCard from '../components/FeatureCard.astro';
+import PostRow from '../components/PostRow.astro';
+import { SITE } from '../config';
+import { withBase } from '../utils/path';
+import { getAllPosts, getAllTags, getSeries, cnVolume, seriesSlug } from '../utils/posts';
+
+const posts = await getAllPosts();
+const pinned = posts.find((p) => p.data.pinned) ?? posts[0];
+const latest = posts.filter((p) => p.id !== pinned?.id).slice(0, 6);
+const series = [...getSeries(posts).entries()].map(([name, list]) => {
+  const explicit = list.find((p) => p.data.seriesSlug)?.data.seriesSlug;
+  return { name, list, slug: explicit ?? encodeURIComponent(name) };
+});
+const tags = getAllTags(posts);
+---
+
+<Base>
+  <section class="hero">
+    <div class="hero-bg" aria-hidden="true">
+      <div class="blob b1"></div>
+      <div class="blob b2"></div>
+      <div class="blob b3"></div>
+      <div class="grid-lines"></div>
+    </div>
+
+    <span class="hero-side v-text" aria-hidden="true">拾 技 术 之 美 · 集 生 活 之 思</span>
+
+    <div class="container hero-inner">
+      <p class="hero-kicker fade-in-line">
+        <span class="k-line"></span>
+        {SITE.subtitle}
+      </p>
+
+      <h1 class="hero-title fade-in-line" style="--rd: 0.08s">
+        <span class="t-main">拾集</span>
+        <span class="t-sep" aria-hidden="true"></span>
+        <span class="t-sub">一个装得下<br /><em>代码与心事</em>的院子</span>
+      </h1>
+
+      <p class="hero-desc fade-in-line" style="--rd: 0.16s">
+        这里收纳我的{SITE.tagline} —— 教程笔记讲得明白，偶尔也写点小作文。
+        按合集整理，随时可检索、可分享。
+      </p>
+
+      <div class="hero-cta fade-in-line" style="--rd: 0.24s">
+        <a href={withBase('/posts/')} class="btn btn-primary">
+          开始阅读 <Icon name="arrow-right" size={16} />
+        </a>
+        <a href={withBase('/series/')} class="btn">
+          <Icon name="folder" size={16} /> 逛逛合集
+        </a>
+      </div>
+
+      <dl class="hero-stats fade-in-line" style="--rd: 0.32s">
+        <a href={withBase('/posts/')}><dt>文章</dt><dd>{posts.length}</dd></a>
+        <span class="stat-sep" aria-hidden="true"></span>
+        <a href={withBase('/series/')}><dt>合集</dt><dd>{series.length}</dd></a>
+        <span class="stat-sep" aria-hidden="true"></span>
+        <a href={withBase('/tags/')}><dt>标签</dt><dd>{tags.length}</dd></a>
+      </dl>
+    </div>
+
+    <div class="scroll-hint" aria-hidden="true">
+      <Icon name="arrow-up" size={16} class="hint-icon" />
+    </div>
+  </section>
+
+  <div class="container">
+    {pinned && <FeatureCard post={pinned} />}
+
+    <section class="section">
+      <header class="sec-head reveal">
+        <h2 class="sec-title">最新落笔</h2>
+        <a class="sec-more u-link" href={withBase('/posts/')}>
+          全部文章 <Icon name="arrow-right" size={14} />
+        </a>
+      </header>
+      <div class="post-list">
+        {latest.map((p, i) => <PostRow post={p} style={`--rd:${Math.min(i, 4) * 0.06}s`} />)}
+      </div>
+    </section>
+
+    {
+      series.length > 0 && (
+        <section class="section">
+          <header class="sec-head reveal">
+            <h2 class="sec-title">合集书架</h2>
+            <a class="sec-more u-link" href={withBase('/series/')}>
+              全部合集 <Icon name="arrow-right" size={14} />
+            </a>
+          </header>
+<div class="series-grid">
+        {series.slice(0, 3).map(({ name, list, slug }, i) => (
+          <a
+            class="series-card reveal"
+            href={withBase(`/series/${slug}/`)}
+            style={`--rd:${i * 0.07}s`}
+          >
+            <span class="sc-vol v-text">卷{cnVolume(i + 1)}</span>
+            <div class="sc-body">
+              <h3 class="sc-name">{name}</h3>
+              <p class="sc-desc">{list.length} 篇 · 持续更新中</p>
+            </div>
+            <span class="sc-arrow">
+              <Icon name="arrow-right" size={18} />
+            </span>
+          </a>
+        ))}
+      </div>
+        </section>
+      )
+    }
+  </div>
+</Base>
+
+<style>
+  /* ---------- Hero ---------- */
+  .hero {
+    position: relative;
+    overflow: hidden;
+    padding: clamp(4rem, 10vh, 7rem) 0 4.5rem;
+  }
+
+  .hero-bg {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  .blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(70px);
+    will-change: transform;
+  }
+
+  .b1 {
+    width: 34rem;
+    height: 34rem;
+    left: -10rem;
+    top: -12rem;
+    background: radial-gradient(circle at 35% 35%, color-mix(in srgb, var(--accent) 34%, transparent), transparent 68%);
+    animation: drift1 22s var(--ease-out) infinite alternate;
+  }
+
+  .b2 {
+    width: 26rem;
+    height: 26rem;
+    right: -6rem;
+    top: -4rem;
+    background: radial-gradient(circle at 60% 40%, color-mix(in srgb, var(--gold) 30%, transparent), transparent 66%);
+    animation: drift2 26s var(--ease-out) infinite alternate;
+  }
+
+  .b3 {
+    width: 22rem;
+    height: 22rem;
+    right: 18%;
+    bottom: -12rem;
+    background: radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--teal) 26%, transparent), transparent 64%);
+    animation: drift3 30s var(--ease-out) infinite alternate;
+  }
+
+  @keyframes drift1 {
+    to {
+      transform: translate3d(6rem, 4rem, 0) rotate(12deg) scale(1.12);
+    }
+  }
+
+  @keyframes drift2 {
+    to {
+      transform: translate3d(-5rem, 6rem, 0) rotate(-10deg) scale(1.08);
+    }
+  }
+
+  @keyframes drift3 {
+    to {
+      transform: translate3d(-6rem, -4rem, 0) scale(1.15);
+    }
+  }
+
+  .grid-lines {
+    position: absolute;
+    inset: 0;
+    background-image: linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size: 4.5rem 4.5rem;
+    mask-image: radial-gradient(70% 60% at 50% 30%, #000 0%, transparent 100%);
+    opacity: 0.45;
+  }
+
+  .hero-side {
+    position: absolute;
+    right: max(1.2rem, calc((100% - var(--container)) / 2 - 3rem));
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.8rem;
+    color: var(--ink3);
+    padding: 1.2rem 0.35rem;
+    border-block: 2px solid var(--line2);
+    opacity: 0.85;
+  }
+
+  .hero-inner {
+    position: relative;
+  }
+
+  .hero-kicker {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    font-size: 0.86rem;
+    letter-spacing: 0.32em;
+    color: var(--ink2);
+    font-weight: 600;
+    margin: 0;
+  }
+
+  .k-line {
+    width: 2.6rem;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), transparent);
+  }
+
+  .hero-title {
+    display: flex;
+    align-items: center;
+    gap: clamp(1rem, 3vw, 2.2rem);
+    margin: 1.4rem 0 1.6rem;
+    font-size: clamp(2.2rem, 6.5vw, 4.6rem);
+    line-height: 1.12;
+  }
+
+  .t-main {
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    background: linear-gradient(120deg, var(--ink) 30%, var(--accent) 90%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .t-sep {
+    flex: none;
+    width: 1px;
+    height: clamp(3rem, 7vw, 5rem);
+    background: linear-gradient(var(--line2), transparent);
+  }
+
+  .t-sub {
+    font-size: 0.42em;
+    font-weight: 560;
+    color: var(--ink2);
+    line-height: 1.65;
+    letter-spacing: 0.12em;
+  }
+
+  .t-sub em {
+    font-style: normal;
+    color: var(--accent-ink);
+    position: relative;
+  }
+
+  .t-sub em::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -2px;
+    height: 7px;
+    background: color-mix(in srgb, var(--accent) 16%, transparent);
+    border-radius: 3px;
+    z-index: -1;
+  }
+
+  .hero-desc {
+    max-width: 34rem;
+    color: var(--ink2);
+    font-size: 1.02rem;
+    margin: 0 0 2.2rem;
+  }
+
+  .hero-cta {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .hero-stats {
+    display: flex;
+    align-items: center;
+    gap: 1.6rem;
+    margin: 2.8rem 0 0;
+  }
+
+  .hero-stats a {
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+    transition: transform 0.25s var(--ease-spring);
+  }
+
+  .hero-stats a:hover {
+    transform: translateY(-2px);
+  }
+
+  .hero-stats dt {
+    font-size: 0.8rem;
+    letter-spacing: 0.2em;
+    color: var(--ink3);
+  }
+
+  .hero-stats dd {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 1.7rem;
+    font-weight: 640;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .hero-stats a:hover dd {
+    color: var(--accent-ink);
+  }
+
+  .stat-sep {
+    width: 1px;
+    height: 1.6rem;
+    background: var(--line2);
+  }
+
+  .scroll-hint {
+    position: absolute;
+    left: 50%;
+    bottom: 1.1rem;
+    transform: translateX(-50%) rotate(180deg);
+    color: var(--ink3);
+    animation: hint-float 2.4s ease-in-out infinite;
+  }
+
+  @keyframes hint-float {
+    50% {
+      transform: translateX(-50%) rotate(180deg) translateY(5px);
+    }
+  }
+
+  /* ---------- 区块 ---------- */
+  .section {
+    margin-top: 4.2rem;
+  }
+
+  .sec-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 1.1rem;
+  }
+
+  .sec-title {
+    font-size: 1.42rem;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+
+  .sec-title::before {
+    content: '';
+    width: 1.15rem;
+    height: 0.55rem;
+    border-radius: 2px;
+    background: linear-gradient(135deg, var(--accent), var(--gold));
+    transform: skewX(-12deg);
+  }
+
+  .sec-more {
+    font-size: 0.86rem;
+    color: var(--ink2);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+
+  /* ---------- 合集卡片 ---------- */
+  .series-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(19rem, 1fr));
+    gap: 1rem;
+  }
+
+  .series-card {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.35rem 1.5rem;
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    background: var(--bg1);
+    overflow: hidden;
+    transition: transform 0.3s var(--ease-spring), box-shadow 0.3s, border-color 0.3s;
+  }
+
+  .series-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(120deg, var(--wash), transparent 55%);
+    opacity: 0;
+    transition: opacity 0.35s;
+  }
+
+  .series-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-md);
+    border-color: color-mix(in srgb, var(--accent) 40%, var(--line2));
+  }
+
+  .series-card:hover::before {
+    opacity: 1;
+  }
+
+  .sc-vol {
+    flex: none;
+    font-size: 0.92rem;
+    color: var(--accent-ink);
+    border: 1.5px solid color-mix(in srgb, var(--accent) 55%, transparent);
+    border-radius: 8px;
+    padding: 0.9rem 0.4rem;
+    background: color-mix(in srgb, var(--accent) 7%, transparent);
+  }
+
+  .sc-body {
+    position: relative;
+    min-width: 0;
+  }
+
+  .sc-name {
+    font-size: 1.06rem;
+    margin: 0;
+  }
+
+  .sc-desc {
+    margin: 0.3rem 0 0;
+    font-size: 0.8rem;
+    color: var(--ink3);
+  }
+
+  .sc-arrow {
+    margin-left: auto;
+    color: var(--ink3);
+    transition: color 0.25s, transform 0.25s var(--ease-out);
+  }
+
+  .series-card:hover .sc-arrow {
+    color: var(--accent);
+    transform: translateX(4px);
+  }
+
+  @media (max-width: 860px) {
+    .hero-side {
+      display: none;
+    }
+  }
+
+  @media (max-width: 560px) {
+    .hero-title {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.8rem;
+    }
+
+    .t-sep {
+      display: none;
+    }
+  }
+</style>

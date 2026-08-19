@@ -1,0 +1,212 @@
+---
+import '../styles/fonts.css';
+import '../styles/global.css';
+import { ClientRouter } from 'astro:transitions';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import SearchDialog from '../components/SearchDialog.astro';
+import Icon from '../components/Icon.astro';
+import SEO from '../components/SEO.astro';
+import { SITE } from '../config';
+import { withBase } from '../utils/path';
+
+interface Props {
+  title?: string;
+  description?: string;
+  type?: 'website' | 'article';
+  image?: string;
+  publishedTime?: Date;
+  modifiedTime?: Date;
+  tags?: string[];
+  noindex?: boolean;
+}
+
+const props = Astro.props;
+---
+
+<!doctype html>
+<html lang="zh-CN" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="generator" content={Astro.generator} />
+    <script is:inline>
+      // 主题初始化：在首帧渲染前设置，避免闪烁
+      (() => {
+        const saved = localStorage.getItem('theme');
+        const theme =
+          saved === 'dark' || saved === 'light'
+            ? saved
+            : matchMedia('(prefers-color-scheme: dark)').matches
+              ? 'dark'
+              : 'light';
+        document.documentElement.dataset.theme = theme;
+      })();
+    </script>
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f5efe2" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#16120d" />
+    <link rel="icon" type="image/svg+xml" href={withBase('/favicon.svg')} />
+    <link rel="sitemap" href={withBase('/sitemap-index.xml')} />
+    <link
+      rel="alternate"
+      type="application/rss+xml"
+      title={`${SITE.title} RSS`}
+      href={withBase('/rss.xml')}
+    />
+    <SEO {...props} />
+    <ClientRouter />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">跳到正文</a>
+
+    <Header />
+
+    <main id="main" transition:name="main-content" transition:animate="initial">
+      <slot />
+    </main>
+
+    <Footer />
+    <SearchDialog />
+
+    <button id="back-top" class="back-top" type="button" aria-label="回到顶部">
+      <Icon name="arrow-up" size={18} />
+    </button>
+
+    <script>
+      /* ---------- 入场动效（滚动触发） ---------- */
+      let io: IntersectionObserver | null = null;
+      const initReveal = () => {
+        io?.disconnect();
+        io = new IntersectionObserver(
+          (entries) => {
+            for (const en of entries) {
+              if (en.isIntersecting) {
+                en.target.classList.add('in');
+                io?.unobserve(en.target);
+              }
+            }
+          },
+          { rootMargin: '0px 0px -8% 0px', threshold: 0.05 },
+        );
+        document.querySelectorAll('.reveal:not(.in)').forEach((el) => io!.observe(el));
+      };
+
+      /* ---------- 代码块：语言标签 + 复制按钮 ---------- */
+      const enhanceCode = () => {
+        document.querySelectorAll('pre.astro-code').forEach((pre) => {
+          if (pre.querySelector('.code-chrome')) return;
+          const lang =
+            [...pre.classList].find((c) => c.startsWith('language-'))?.slice(9) || 'text';
+          const chrome = document.createElement('div');
+          chrome.className = 'code-chrome';
+          chrome.innerHTML = `<span>${lang}</span><button class="code-copy" type="button">复制</button>`;
+          pre.prepend(chrome);
+        });
+      };
+
+      /* ---------- 正文外链新窗口打开 ---------- */
+      const externalLinks = () => {
+        document.querySelectorAll('.prose a[href^="http"]').forEach((a) => {
+          if (!a.hostname.includes(location.hostname)) {
+            a.target = '_blank';
+            a.rel = 'noopener noreferrer';
+          }
+        });
+      };
+
+      document.addEventListener('astro:page-load', () => {
+        initReveal();
+        enhanceCode();
+        externalLinks();
+      });
+
+      /* ---------- 复制代码（事件委托） ---------- */
+      document.addEventListener('click', async (e) => {
+        const btn = (e.target as HTMLElement).closest('.code-copy');
+        if (!btn) return;
+        const pre = btn.closest('pre');
+        if (!pre) return;
+        try {
+          await navigator.clipboard.writeText(pre.querySelector('code')?.innerText ?? pre.innerText);
+          btn.textContent = '已复制 ✓';
+          btn.classList.add('done');
+          setTimeout(() => {
+            btn.textContent = '复制';
+            btn.classList.remove('done');
+          }, 1600);
+        } catch {
+          btn.textContent = '复制失败';
+        }
+      });
+
+      /* ---------- 分享（事件委托） ---------- */
+      document.addEventListener('click', async (e) => {
+        const btn = (e.target as HTMLElement).closest('[data-share]');
+        if (!btn) return;
+        const url = location.href;
+        const title = document.title;
+        if (navigator.share) {
+          try {
+            await navigator.share({ title, url });
+            return;
+          } catch {
+            /* 用户取消 */
+          }
+        }
+        await navigator.clipboard.writeText(url);
+        const original = btn.querySelector('.share-label')?.textContent ?? '分享';
+        const label = btn.querySelector('.share-label');
+        if (label) {
+          label.textContent = '已复制链接 ✓';
+          setTimeout(() => (label.textContent = original), 1600);
+        }
+      });
+
+      /* ---------- 回到顶部 ---------- */
+      const onScrollTop = () => {
+        document.getElementById('back-top')?.classList.toggle('show', window.scrollY > 600);
+      };
+      window.addEventListener('scroll', onScrollTop, { passive: true });
+      document.addEventListener('astro:page-load', onScrollTop);
+      document.addEventListener('click', (e) => {
+        if ((e.target as HTMLElement).closest('#back-top')) {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      });
+    </script>
+  </body>
+</html>
+
+<style>
+  .back-top {
+    position: fixed;
+    right: 1.4rem;
+    bottom: 1.6rem;
+    z-index: 90;
+    display: grid;
+    place-items: center;
+    width: 2.9rem;
+    height: 2.9rem;
+    border-radius: 50%;
+    border: 1px solid var(--line2);
+    background: color-mix(in srgb, var(--bg1) 88%, transparent);
+    backdrop-filter: blur(8px);
+    color: var(--ink2);
+    box-shadow: var(--shadow-md);
+    opacity: 0;
+    transform: translateY(12px) scale(0.9);
+    pointer-events: none;
+    transition: opacity 0.3s, transform 0.3s var(--ease-spring), color 0.2s, border-color 0.2s;
+  }
+
+  .back-top.show {
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
+  }
+
+  .back-top:hover {
+    color: var(--accent-ink);
+    border-color: var(--accent);
+  }
+</style>

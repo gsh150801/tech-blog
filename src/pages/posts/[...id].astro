@@ -1,0 +1,377 @@
+---
+import { getCollection, render } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import Icon from '../../components/Icon.astro';
+import Toc from '../../components/Toc.astro';
+import SeriesBox from '../../components/SeriesBox.astro';
+import Giscus from '../../components/Giscus.astro';
+import { SITE } from '../../config';
+import { withBase } from '../../utils/path';
+import { postUrl, readingTime } from '../../utils/posts';
+
+export async function getStaticPaths() {
+  const posts = await getCollection('posts', ({ data }) => !data.draft);
+  return posts.map((post) => ({
+    params: { id: post.id },
+    props: { post },
+  }));
+}
+
+const { post } = Astro.props;
+const { Content, headings } = await render(post);
+
+const reading = readingTime(post);
+const all = (await getCollection('posts', ({ data }) => !data.draft)).sort(
+  (a, b) => b.data.date.valueOf() - a.data.date.valueOf(),
+);
+const idx = all.findIndex((p) => p.id === post.id);
+const prev = idx < all.length - 1 ? all[idx + 1] : null;
+const next = idx > 0 ? all[idx - 1] : null;
+
+// 合集上下文
+const seriesMap = new Map<string, { posts: typeof all; slug: string }>();
+for (const p of all) {
+  if (!p.data.series) continue;
+  const slug = p.data.seriesSlug ?? encodeURIComponent(p.data.series);
+  if (!seriesMap.has(p.data.series)) seriesMap.set(p.data.series, { posts: [], slug });
+  seriesMap.get(p.data.series)!.posts.push(p);
+}
+for (const [, v] of seriesMap) {
+  v.posts.sort((a, b) => {
+    const oa = a.data.seriesOrder ?? Number.MAX_SAFE_INTEGER;
+    const ob = b.data.seriesOrder ?? Number.MAX_SAFE_INTEGER;
+    return oa !== ob ? oa - ob : a.data.date.valueOf() - b.data.date.valueOf();
+  });
+}
+const seriesEntry = post.data.series ? seriesMap.get(post.data.series) : undefined;
+const seriesPosts = seriesEntry?.posts;
+const seriesSlug = seriesEntry?.slug ?? '';
+const editUrl = `https://github.com/${SITE.repo}/edit/main/src/content/posts/${post.id}.md`;
+---
+
+<Base
+  title={post.data.title}
+  description={post.data.description}
+  type="article"
+  publishedTime={post.data.date}
+  modifiedTime={post.data.updated}
+  tags={post.data.tags}
+>
+  <div class="container-wide">
+    <article class="post-layout">
+      <div class="post-main">
+        <header class="post-header">
+          <nav class="crumbs reveal" aria-label="位置">
+            <a href={withBase('/posts/')}>文章</a>
+            {
+              post.data.series && seriesSlug && (
+                <>
+                  <span class="crumb-sep">/</span>
+                  <a href={withBase(`/series/${seriesSlug}/`)}>
+                    {post.data.series}
+                  </a>
+                </>
+              )
+            }
+            <span class="crumb-sep">/</span>
+            <span class="crumb-cur">{post.data.title}</span>
+          </nav>
+
+          <h1 class="post-title reveal" style="--rd: 0.05s">{post.data.title}</h1>
+
+          {
+            post.data.description && (
+              <p class="post-lead reveal" style="--rd: 0.1s">{post.data.description}</p>
+            )
+          }
+
+          <div class="post-meta reveal" style="--rd: 0.15s">
+            <span class="pm-item">
+              <Icon name="calendar" size={14} />
+              <time datetime={post.data.date.toISOString()}>
+                {post.data.date.getFullYear()} 年 {post.data.date.getMonth() + 1} 月 {post.data.date.getDate()} 日
+              </time>
+            </span>
+            {
+              post.data.updated && post.data.updated.valueOf() !== post.data.date.valueOf() && (
+                <span class="pm-item">
+                  <Icon name="pen" size={14} />
+                  更新于
+                  {post.data.updated.getFullYear()} 年 {post.data.updated.getMonth() + 1} 月 {post.data.updated.getDate()} 日
+                </span>
+              )
+            }
+            <span class="pm-item">
+              <Icon name="clock" size={14} /> 约 {reading} 分钟
+            </span>
+            <button class="pm-share" data-share type="button">
+              <Icon name="share" size={14} />
+              <span class="share-label">分享</span>
+            </button>
+          </div>
+        </header>
+
+        <div class="prose post-body reveal" data-pagefind-body>
+          <Content />
+        </div>
+
+        <footer class="post-foot">
+          {
+            post.data.tags.length > 0 && (
+              <div class="tag-row reveal">
+                <Icon name="tag" size={15} />
+                {post.data.tags.map((t) => (
+                  <a class="chip" href={withBase(`/tags/${encodeURIComponent(t)}/`)}>#{t}</a>
+                ))}
+              </div>
+            )
+          }
+
+          {seriesPosts && (
+            <SeriesBox
+              name={post.data.series!}
+              posts={seriesPosts}
+              currentId={post.id}
+              slug={seriesSlug}
+            />
+          )}
+
+          {
+            !seriesPosts && (prev || next) && (
+              <nav class="pn-nav reveal" aria-label="上一篇下一篇">
+                {prev ? (
+                  <a class="pn-link" href={postUrl(prev)} rel="prev">
+                    <span class="pn-label">
+                      <Icon name="arrow-left" size={14} /> 上一篇
+                    </span>
+                    <span class="pn-title">{prev.data.title}</span>
+                  </a>
+                ) : (
+                  <span />
+                )}
+                {next ? (
+                  <a class="pn-link right" href={postUrl(next)} rel="next">
+                    <span class="pn-label">
+                      下一篇 <Icon name="arrow-right" size={14} />
+                    </span>
+                    <span class="pn-title">{next.data.title}</span>
+                  </a>
+                ) : (
+                  <span />
+                )}
+              </nav>
+            )
+          }
+
+          <a class="edit-link" href={editUrl} target="_blank" rel="noopener noreferrer">
+            <Icon name="external" size={13} /> 在 GitHub 上编辑本文
+          </a>
+
+          <Giscus />
+        </footer>
+      </div>
+
+      <aside class="post-aside">
+        <Toc headings={headings} />
+      </aside>
+    </article>
+  </div>
+</Base>
+
+<style>
+  .post-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2rem;
+    padding-block: 2.8rem 1rem;
+    max-width: 60rem;
+    margin-inline: auto;
+  }
+
+  .post-main {
+    width: 100%;
+    max-width: var(--content-w);
+    margin-inline: auto;
+  }
+
+  .crumbs {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    font-size: 0.8rem;
+    color: var(--ink3);
+    flex-wrap: wrap;
+  }
+
+  .crumbs a {
+    transition: color 0.2s;
+  }
+
+  .crumbs a:hover {
+    color: var(--accent-ink);
+  }
+
+  .crumb-sep {
+    color: var(--line2);
+  }
+
+  .crumb-cur {
+    color: var(--ink2);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 16rem;
+  }
+
+  .post-title {
+    font-size: clamp(1.4rem, 3.6vw, 2.3rem);
+    margin: 1.1rem 0 0.4rem;
+    line-height: 1.35;
+  }
+
+  .post-lead {
+    color: var(--ink2);
+    font-size: 1.02rem;
+    margin: 0.6rem 0 1.2rem;
+  }
+
+  .post-meta {
+    display: flex;
+    align-items: center;
+    gap: 1.2rem;
+    flex-wrap: wrap;
+    padding-bottom: 1.6rem;
+    margin-bottom: 2.2rem;
+    border-bottom: 1px solid var(--line);
+    font-size: 0.82rem;
+    color: var(--ink3);
+  }
+
+  .pm-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4em;
+  }
+
+  .pm-share {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4em;
+    padding: 0.35em 0.9em;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    color: var(--ink2);
+    font-size: 0.8rem;
+    transition: border-color 0.2s, color 0.2s, background-color 0.2s, transform 0.2s var(--ease-spring);
+  }
+
+  .pm-share:hover {
+    border-color: var(--accent);
+    color: var(--accent-ink);
+    background: var(--wash);
+    transform: translateY(-1px);
+  }
+
+  .post-foot {
+    margin-top: 2rem;
+  }
+
+  .tag-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    color: var(--ink3);
+    margin-bottom: 1rem;
+  }
+
+  .pn-nav {
+    display: flex;
+    gap: 0.8rem;
+  }
+
+  .pn-link {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding: 1rem 1.2rem;
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    background: var(--bg1);
+    transition: border-color 0.25s, box-shadow 0.25s, transform 0.25s var(--ease-spring);
+  }
+
+  .pn-link:hover {
+    border-color: color-mix(in srgb, var(--accent) 45%, var(--line2));
+    box-shadow: var(--shadow-sm);
+    transform: translateY(-2px);
+  }
+
+  .pn-link.right {
+    text-align: right;
+  }
+
+  .pn-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35em;
+    font-size: 0.72rem;
+    letter-spacing: 0.15em;
+    color: var(--ink3);
+  }
+
+  .pn-title {
+    font-family: var(--font-display);
+    font-weight: 640;
+    color: var(--ink);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .edit-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4em;
+    margin-top: 1.6rem;
+    font-size: 0.78rem;
+    color: var(--ink3);
+    opacity: 0.85;
+    transition: color 0.2s, opacity 0.2s;
+  }
+
+  .edit-link:hover {
+    color: var(--accent-ink);
+    opacity: 1;
+  }
+
+  @media (min-width: 1100px) {
+    .post-layout {
+      grid-template-columns: minmax(0, 44rem) 15rem;
+      justify-content: center;
+      gap: 3.5rem;
+      max-width: none;
+    }
+
+    .post-main {
+      margin-inline: 0;
+    }
+
+    .post-aside {
+      padding-top: 5.6rem;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .pn-nav {
+      flex-direction: column;
+    }
+
+    .pn-link.right {
+      text-align: left;
+    }
+  }
+</style>

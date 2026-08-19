@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://gsh150801.github.io/tech-blog/sitemap-index.xml

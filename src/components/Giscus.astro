@@ -1,0 +1,122 @@
+---
+/**
+ * giscus 评论区（基于 GitHub Discussions，访客用 GitHub 账号登录评论）
+ * 滚动到可视区域时才加载，不影响首屏性能。
+ */
+import Icon from './Icon.astro';
+import { GISCUS, SITE } from '../config';
+import { withBase } from '../utils/path';
+
+const ready = GISCUS.enabled && !!GISCUS.repoId && !!GISCUS.categoryId;
+---
+
+<section class="comments" aria-label="评论区">
+  <h2 class="comments-head">
+    <Icon name="sparkle" size={17} />
+    留言讨论
+  </h2>
+
+  {
+    ready ? (
+      <div class="giscus-wrap" data-giscus-container />
+    ) : (
+      <div class="giscus-setup">
+        <p>
+          评论区正在配置中（giscus · GitHub 登录评论）。完成
+          <a href={withBase('/about/')}>三步启用</a>
+          后这里会自动变成 GitHub Discussions 评论区。
+        </p>
+        <p class="setup-hint">
+          仓库 <code>{SITE.repo}</code> 需开启 Discussions 并安装 giscus App，详见 README。
+        </p>
+      </div>
+    )
+  }
+</section>
+
+<style>
+  .comments {
+    margin-top: 3.5rem;
+    padding-top: 2.2rem;
+    border-top: 1px solid var(--line);
+  }
+
+  .comments-head {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.15rem;
+    margin-bottom: 1.4rem;
+  }
+
+  .giscus-wrap {
+    min-height: 8rem;
+  }
+
+  .giscus-setup {
+    border: 1px dashed var(--line2);
+    border-radius: var(--r-md);
+    padding: 1.2rem 1.4rem;
+    color: var(--ink2);
+    font-size: 0.92rem;
+    background: color-mix(in srgb, var(--bg1) 60%, transparent);
+  }
+
+  .giscus-setup a {
+    color: var(--accent-ink);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .giscus-setup code {
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+    background: var(--wash);
+    border-radius: 5px;
+    padding: 0.1em 0.4em;
+  }
+
+  .setup-hint {
+    margin-top: 0.5rem;
+    font-size: 0.84rem;
+    color: var(--ink3);
+  }
+</style>
+
+<script>
+  import { GISCUS } from '../config';
+
+  const mount = () => {
+    const wrap = document.querySelector<HTMLElement>('[data-giscus-container]');
+    if (!wrap || wrap.dataset.loaded === '1') return;
+    wrap.dataset.loaded = '1';
+
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((en) => en.isIntersecting)) return;
+        io.disconnect();
+        const s = document.createElement('script');
+        s.src = 'https://giscus.app/client.js';
+        s.async = true;
+        s.crossOrigin = 'anonymous';
+        s.setAttribute('data-repo', GISCUS.repo);
+        s.setAttribute('data-repo-id', GISCUS.repoId);
+        s.setAttribute('data-category', GISCUS.category);
+        s.setAttribute('data-category-id', GISCUS.categoryId);
+        s.setAttribute('data-mapping', GISCUS.mapping);
+        s.setAttribute('data-strict', '1');
+        s.setAttribute('data-reactions-enabled', GISCUS.reactionsEnabled);
+        s.setAttribute('data-emit-metadata', '0');
+        s.setAttribute('data-input-position', GISCUS.inputPosition);
+        s.setAttribute('data-theme', document.documentElement.dataset.theme === 'dark' ? 'transparent_dark' : 'transparent_light');
+        s.setAttribute('data-lang', GISCUS.lang);
+        s.setAttribute('data-loading', 'lazy');
+        wrap.appendChild(s);
+      },
+      { rootMargin: '320px' },
+    );
+    io.observe(wrap);
+  };
+
+  document.addEventListener('astro:page-load', mount);
+</script>

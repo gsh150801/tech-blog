@@ -1,0 +1,83 @@
+import { getCollection, type CollectionEntry } from 'astro:content';
+import { withBase } from './path';
+
+export type Post = CollectionEntry<'posts'>;
+
+const CN_NUM = ['零', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十'];
+
+/** 获取全部文章（默认过滤草稿），按日期倒序 */
+export async function getAllPosts(): Promise<Post[]> {
+  const posts = await getCollection('posts', ({ data }) => !data.draft);
+  return posts.sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+}
+
+/** 文章链接 */
+export function postUrl(post: Post): string {
+  return withBase(`/posts/${post.id}/`);
+}
+
+/** 阅读时长（分钟）：中文按 350 字/分钟，英文按 220 词/分钟 */
+export function readingTime(post: Post): number {
+  const text = post.body ?? '';
+  const cjk = (text.match(/[\u4e00-\u9fff]/g) ?? []).length;
+  const words = text
+    .replace(/[\u4e00-\u9fff]/g, ' ')
+    .split(/\s+/)
+    .filter(Boolean).length;
+  return Math.max(1, Math.round(cjk / 350 + words / 220));
+}
+
+/** 标签 -> 文章数（按文章数降序） */
+export function getAllTags(posts: Post[]): [tag: string, count: number][] {
+  const map = new Map<string, number>();
+  for (const p of posts) for (const t of p.data.tags) map.set(t, (map.get(t) ?? 0) + 1);
+  return [...map.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'zh'));
+}
+
+/** 合集 -> 文章列表（合集内按 seriesOrder 升序，缺省按日期正序） */
+export function getSeries(posts: Post[]): Map<string, Post[]> {
+  const map = new Map<string, Post[]>();
+  for (const p of posts) {
+    if (!p.data.series) continue;
+    const list = map.get(p.data.series) ?? [];
+    list.push(p);
+    map.set(p.data.series, list);
+  }
+  for (const [, list] of map) {
+    list.sort((a, b) => {
+      const oa = a.data.seriesOrder ?? Number.MAX_SAFE_INTEGER;
+      const ob = b.data.seriesOrder ?? Number.MAX_SAFE_INTEGER;
+      return oa !== ob ? oa - ob : a.data.date.valueOf() - b.data.date.valueOf();
+    });
+  }
+  return new Map(
+    [...map.entries()].sort((a, b) => {
+      const ta = a[1][0]?.data.date.valueOf() ?? 0;
+      const tb = b[1][0]?.data.date.valueOf() ?? 0;
+      return tb - ta;
+    }),
+  );
+}
+
+/** 合集在系列页的 slug：
+ *  1) 优先用系列文章 frontmatter 里的 seriesSlug 字段（ASCII 安全路径，避开 Pages 404）
+ *  2) 缺省回退到 %xx 编码
+ */
+export function seriesSlug(name: string, explicit?: string): string {
+  return explicit || encodeURIComponent(name);
+}
+
+/** 第 n 个合集的中文卷号（卷一、卷二……） */
+export function cnVolume(n: number): string {
+  if (n <= 0) return CN_NUM[0];
+  if (n < CN_NUM.length) return CN_NUM[n];
+  return String(n);
+}
+
+/** 格式化日期为中文 */
+export function formatDate(d: Date, withYear = true): string {
+  const y = d.getFullYear();
+  const m = d.getMonth() + 1;
+  const day = d.getDate();
+  return withYear ? `${y} 年 ${m} 月 ${day} 日` : `${m} 月 ${day} 日`;
+}

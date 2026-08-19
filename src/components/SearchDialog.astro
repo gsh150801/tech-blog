@@ -1,0 +1,284 @@
+---
+/**
+ * 站内搜索（Pagefind，构建后生成索引，按需懒加载，支持中文分词）
+ */
+import Icon from './Icon.astro';
+import { SITE } from '../config';
+---
+
+<dialog id="search-dialog" class="search-dialog" aria-label="站内搜索">
+  <div class="search-box">
+    <div class="search-input-row">
+      <Icon name="search" size={18} class="s-icon" />
+      <input
+        id="search-input"
+        type="search"
+        placeholder={`搜索 ${SITE.title} 的文章…`}
+        autocomplete="off"
+        spellcheck="false"
+      />
+      <kbd class="s-esc">ESC</kbd>
+    </div>
+    <div id="search-status" class="search-status" hidden></div>
+    <div id="search-results" class="search-results"></div>
+    <div class="search-foot">
+      <span><kbd>↑</kbd><kbd>↓</kbd> 切换</span>
+      <span><kbd>↵</kbd> 打开</span>
+      <span><kbd>esc</kbd> 关闭</span>
+      <span class="s-brand">拾集 · 搜索</span>
+    </div>
+  </div>
+</dialog>
+
+<style>
+  .search-dialog {
+    margin: 12vh auto 0;
+    width: min(38rem, calc(100% - 2rem));
+  }
+
+  .search-box {
+    display: flex;
+    flex-direction: column;
+    background: var(--bg1);
+    border: 1px solid var(--line2);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+    animation: search-pop 0.3s var(--ease-spring);
+  }
+
+  @keyframes search-pop {
+    from {
+      opacity: 0;
+      transform: translateY(-10px) scale(0.98);
+    }
+  }
+
+  .search-input-row {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.95rem 1.2rem;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .search-input-row :global(.s-icon) {
+    color: var(--ink3);
+    flex: none;
+  }
+
+  .search-input-row input {
+    flex: 1;
+    border: 0;
+    outline: none;
+    background: transparent;
+    color: var(--ink);
+    font: inherit;
+    font-size: 1.02rem;
+  }
+
+  .search-input-row input::placeholder {
+    color: var(--ink3);
+  }
+
+  .s-esc {
+    font-family: var(--font-mono);
+    font-size: 0.64rem;
+    padding: 0.15em 0.5em;
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    color: var(--ink3);
+  }
+
+  .search-status {
+    padding: 0.8rem 1.3rem;
+    font-size: 0.85rem;
+    color: var(--ink3);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .search-results {
+    max-height: 52vh; /* fallback */
+    max-height: 52dvh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 0.45rem;
+  }
+
+  .search-results:not(:empty) {
+    padding-bottom: 0.6rem;
+  }
+
+  .search-foot {
+    display: flex;
+    gap: 1.1rem;
+    padding: 0.65rem 1.2rem;
+    border-top: 1px solid var(--line);
+    font-size: 0.72rem;
+    color: var(--ink3);
+  }
+
+  .search-foot kbd {
+    font-family: var(--font-mono);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 0 0.35em;
+    margin-right: 0.25em;
+  }
+
+  .s-brand {
+    margin-left: auto;
+    font-family: var(--font-display);
+    letter-spacing: 0.2em;
+  }
+
+  .search-dialog.no-hit .search-results:empty::after {
+    content: '没有找到相关内容，换个关键词试试？';
+    display: block;
+    padding: 1.6rem 1rem;
+    text-align: center;
+    color: var(--ink3);
+    font-size: 0.9rem;
+  }
+</style>
+
+<script>
+  let pagefind: any = null;
+  let loading = false;
+  let activeIndex = -1;
+
+  const dlg = () => document.getElementById('search-dialog') as HTMLDialogElement | null;
+  const input = () => document.getElementById('search-input') as HTMLInputElement | null;
+  const resultsEl = () => document.getElementById('search-results');
+  const statusEl = () => document.getElementById('search-status');
+
+  async function ensurePagefind() {
+    if (pagefind || loading) return pagefind;
+    loading = true;
+    statusEl()!.hidden = false;
+    statusEl()!.textContent = '正在加载搜索索引…';
+    const base = import.meta.env.BASE_URL;
+    pagefind = await import(/* @vite-ignore */ `${base}pagefind/pagefind.js`);
+    await pagefind.options({ excerptLength: 24 });
+    statusEl()!.hidden = true;
+    loading = false;
+  }
+
+  function highlight(el: HTMLElement) {
+    el.scrollIntoView({ block: 'nearest' });
+  }
+
+  function setActive(idx: number) {
+    const items = resultsEl()?.querySelectorAll<HTMLElement>('.s-result') ?? [];
+    if (!items.length) return;
+    activeIndex = (idx + items.length) % items.length;
+    items.forEach((it, i) => it.classList.toggle('active', i === activeIndex));
+    highlight(items[activeIndex]);
+  }
+
+  const debounceTimer: Record<string, ReturnType<typeof setTimeout>> = {};
+  function runSearch(q: string) {
+    clearTimeout(debounceTimer.t);
+    if (!q.trim()) {
+      resultsEl()!.innerHTML = '';
+      dlg()?.classList.remove('no-hit');
+      return;
+    }
+    debounceTimer.t = setTimeout(async () => {
+      await ensurePagefind();
+      if (!pagefind) return;
+      const search = await pagefind.search(q);
+      const items = search.results.slice(0, 8);
+      const frag = document.createDocumentFragment();
+      for (const r of items) {
+        const d = await r.data();
+        const a = document.createElement('a');
+        a.className = 's-result';
+        a.href = d.url;
+        a.innerHTML = `<span class="s-title"></span><span class="s-excerpt"></span>`;
+        (a.querySelector('.s-title') as HTMLElement).textContent = d.meta?.title ?? '(无标题)';
+        (a.querySelector('.s-excerpt') as HTMLElement).innerHTML = d.excerpt ?? '';
+        frag.appendChild(a);
+      }
+      resultsEl()!.innerHTML = '';
+      resultsEl()!.appendChild(frag);
+      dlg()?.classList.toggle('no-hit', items.length === 0);
+      activeIndex = -1;
+    }, 160);
+  }
+
+  function open() {
+    const d = dlg();
+    if (!d) return;
+    d.showModal();
+    requestAnimationFrame(() => input()?.focus());
+    ensurePagefind();
+  }
+
+  // 全局事件委托（跨视图过渡持久生效）
+  document.addEventListener('click', (e) => {
+    if ((e.target as HTMLElement).closest('[data-search-open]')) open();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      const d = dlg();
+      d?.open ? d.close() : open();
+      return;
+    }
+    if (!dlg()?.open) return;
+    if (e.key === 'ArrowDown') { e.preventDefault(); setActive(activeIndex + 1); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setActive(activeIndex - 1); }
+    else if (e.key === 'Enter' && activeIndex >= 0) {
+      resultsEl()?.querySelectorAll<HTMLAnchorElement>('.s-result')[activeIndex]?.click();
+    }
+  });
+
+  document.addEventListener('input', (e) => {
+    if ((e.target as HTMLElement).id === 'search-input') runSearch((e.target as HTMLInputElement).value);
+  });
+</script>
+
+<style is:global>
+  .s-result {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    padding: 0.7rem 0.95rem;
+    border-radius: var(--r-md);
+    transition: background-color 0.15s;
+  }
+
+  .s-result.active,
+  .s-result:hover {
+    background: var(--wash);
+  }
+
+  .s-title {
+    font-family: var(--font-display);
+    font-weight: 640;
+    font-size: 0.98rem;
+  }
+
+  .s-result.active .s-title {
+    color: var(--accent-ink);
+  }
+
+  .s-excerpt {
+    font-size: 0.82rem;
+    color: var(--ink3);
+    line-height: 1.6;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+
+  .s-excerpt mark {
+    background: color-mix(in srgb, var(--accent) 18%, transparent);
+    color: var(--accent-ink);
+    border-radius: 3px;
+    padding: 0 0.15em;
+  }
+</style>

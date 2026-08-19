@@ -1,0 +1,106 @@
+---
+import Base from '../../layouts/Base.astro';
+import PostRow from '../../components/PostRow.astro';
+import Icon from '../../components/Icon.astro';
+import { getAllPosts } from '../../utils/posts';
+
+const posts = await getAllPosts();
+
+const byYear = new Map<number, typeof posts>();
+for (const p of posts) {
+  const y = p.data.date.getFullYear();
+  const list = byYear.get(y) ?? [];
+  list.push(p);
+  byYear.set(y, list);
+}
+const years = [...byYear.keys()].sort((a, b) => b - a);
+---
+
+<Base title="全部文章" description={`拾集全部文章归档，共 ${posts.length} 篇：技术教程、学习笔记与生活随笔。`}>
+  <div class="container">
+    <header class="page-head reveal">
+      <h1 class="page-title">全部文章</h1>
+      <p class="page-desc">
+        共 {posts.length} 篇 · 始于 {years[years.length - 1] ?? new Date().getFullYear()} 年
+      </p>
+    </header>
+
+    {
+      years.map((y) => (
+        <section class="year-group">
+          <div class="year-row reveal">
+            <h2 class="year-label">{y}</h2>
+            <span class="year-count">{byYear.get(y)!.length} 篇</span>
+            <span class="year-line" aria-hidden="true" />
+          </div>
+          <div class="post-list">
+            {byYear.get(y)!.map((p, i) => (
+              <PostRow post={p} style={`--rd:${Math.min(i, 4) * 0.05}s`} />
+            ))}
+          </div>
+        </section>
+      ))
+    }
+  </div>
+</Base>
+
+<style>
+  .page-head {
+    padding: 3.2rem 0 2.4rem;
+  }
+
+  .page-title {
+    font-size: clamp(1.9rem, 4.5vw, 2.6rem);
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+  }
+
+  .page-title::before {
+    content: '';
+    width: 1.3rem;
+    height: 0.6rem;
+    border-radius: 2px;
+    background: linear-gradient(135deg, var(--accent), var(--gold));
+    transform: skewX(-12deg);
+  }
+
+  .page-desc {
+    margin: 0.7rem 0 0;
+    color: var(--ink3);
+    font-size: 0.92rem;
+    letter-spacing: 0.06em;
+  }
+
+  .year-group {
+    margin-bottom: 2.6rem;
+  }
+
+  .year-row {
+    display: flex;
+    align-items: baseline;
+    gap: 0.9rem;
+    margin-bottom: 0.4rem;
+  }
+
+  .year-label {
+    font-family: var(--font-display);
+    font-size: 1.9rem;
+    font-weight: 640;
+    color: var(--ink2);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.04em;
+  }
+
+  .year-count {
+    font-size: 0.78rem;
+    color: var(--ink3);
+    letter-spacing: 0.1em;
+  }
+
+  .year-line {
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, var(--line2), transparent);
+  }
+</style>

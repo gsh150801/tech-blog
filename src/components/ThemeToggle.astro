@@ -1,0 +1,80 @@
+---
+import Icon from './Icon.astro';
+---
+
+<button class="theme-toggle" data-theme-toggle type="button" aria-label="切换深浅主题">
+  <span class="icon-sun"><Icon name="sun" size={19} /></span>
+  <span class="icon-moon"><Icon name="moon" size={19} /></span>
+</button>
+
+<style>
+  .theme-toggle {
+    position: relative;
+    display: inline-grid;
+    place-items: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: var(--r-sm);
+    color: var(--ink2);
+    transition: color 0.2s, background-color 0.2s, transform 0.25s var(--ease-spring);
+  }
+
+  .theme-toggle:hover {
+    color: var(--accent-ink);
+    background: var(--wash);
+    transform: translateY(-1px);
+  }
+
+  .theme-toggle span {
+    grid-area: 1 / 1;
+    display: grid;
+    place-items: center;
+    transition: opacity 0.3s var(--ease-out), transform 0.45s var(--ease-spring);
+  }
+
+  :global([data-theme='light']) .theme-toggle .icon-moon,
+  :global([data-theme='dark']) .theme-toggle .icon-sun {
+    opacity: 0;
+    transform: rotate(90deg) scale(0.4);
+  }
+</style>
+
+<script>
+  const applyTheme = (theme: string) => {
+    document.documentElement.dataset.theme = theme;
+    localStorage.setItem('theme', theme);
+    // 同步 giscus 评论主题
+    document.querySelectorAll<HTMLIFrameElement>('iframe.giscus-frame').forEach((f) => {
+      f.contentWindow?.postMessage(
+        { giscus: { setConfig: { theme: theme === 'dark' ? 'transparent_dark' : 'transparent_light' } } },
+        'https://giscus.app',
+      );
+    });
+  };
+
+  document.addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement).closest('[data-theme-toggle]');
+    if (!btn) return;
+
+    const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const vt = (document as any).startViewTransition?.bind(document);
+
+    if (!reduce && vt) {
+      // 从按钮位置扩散的圆形揭示
+      const r = btn.getBoundingClientRect();
+      const x = r.left + r.width / 2;
+      const y = r.top + r.height / 2;
+      const radius = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
+      const root = document.documentElement;
+      root.style.setProperty('--ripple-x', `${x}px`);
+      root.style.setProperty('--ripple-y', `${y}px`);
+      root.style.setProperty('--ripple-r', `${radius}px`);
+      root.classList.add('theme-ripple');
+      const t = vt(() => applyTheme(next));
+      t.finished.finally(() => root.classList.remove('theme-ripple'));
+    } else {
+      applyTheme(next);
+    }
+  });
+</script>
