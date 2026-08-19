@@ -3,7 +3,7 @@ title: GPU物理架构与内存层级
 description: 真正决定 attention kernel、prefill 吞吐和算子优化边界的，往往是更底层的物理事实：Tensor Core 适合什么计算模式，HBM 和 SRAM 的带宽差距有多大，数据为什么一旦反复搬运就会让算子很快变成 memory bound。
 date: 2026-08-20
 tags: [GPU, 内存层级]
-draft: true
+draft: false
 
 ---
 0. 位数和显存估算
