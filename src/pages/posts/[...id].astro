@@ -10,7 +10,11 @@ import { withBase } from '../../utils/path';
 import { postUrl, readingTime } from '../../utils/posts';
 
 export async function getStaticPaths() {
-  const posts = await getCollection('posts', ({ data }) => !data.draft);
+  const includeDrafts =
+    process.env.INCLUDE_DRAFTS === '1' || process.env.NODE_ENV === 'development';
+  const posts = await getCollection('posts', ({ data }) =>
+    includeDrafts ? true : !data.draft,
+  );
   return posts.map((post) => ({
     params: { id: post.id },
     props: { post },

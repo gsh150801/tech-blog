@@ -2,9 +2,10 @@
 import Base from '../../layouts/Base.astro';
 import PostRow from '../../components/PostRow.astro';
 import Icon from '../../components/Icon.astro';
-import { getAllPosts } from '../../utils/posts';
+import { getAllPosts, getDrafts, postUrl, formatDate } from '../../utils/posts';
 
 const posts = await getAllPosts();
+const drafts = await getDrafts();
 
 const byYear = new Map<number, typeof posts>();
 for (const p of posts) {
@@ -40,6 +41,31 @@ const years = [...byYear.keys()].sort((a, b) => b - a);
           </div>
         </section>
       ))
+    }
+
+    {
+      drafts.length > 0 && (
+        <section class="drafts">
+          <div class="drafts-head">
+            <span class="drafts-badge">草稿</span>
+            <h2 class="drafts-title">未发布的草稿</h2>
+            <span class="drafts-meta">仅本机构建可见 · 公开站点不会展示</span>
+          </div>
+          <ul class="drafts-list">
+            {drafts.map((p) => (
+              <li class="draft-item">
+                <span class="draft-name">{p.data.title}</span>
+                <span class="draft-date">{formatDate(p.data.date, false)}</span>
+                <code class="draft-id">{p.id}</code>
+              </li>
+            ))}
+          </ul>
+          <p class="drafts-hint">
+            要正式发布？把 frontmatter 里的 <code>draft: true</code> 改为
+            <code>false</code>，提交即可。
+          </p>
+        </section>
+      )
     }
   </div>
 </Base>
@@ -102,5 +128,99 @@ const years = [...byYear.keys()].sort((a, b) => b - a);
     flex: 1;
     height: 1px;
     background: linear-gradient(90deg, var(--line2), transparent);
+  }
+
+  /* 草稿区（仅含 INCLUDE_DRAFTS=1 的构建里出现） */
+  .drafts {
+    margin: 2.5rem 0 1.5rem;
+    padding: 1.5rem 1.6rem;
+    border: 1px dashed var(--line2);
+    border-radius: var(--r-lg);
+    background: color-mix(in srgb, var(--wash) 40%, var(--bg1));
+  }
+
+  .drafts-head {
+    display: flex;
+    align-items: baseline;
+    gap: 0.7rem;
+    margin-bottom: 1rem;
+  }
+
+  .drafts-badge {
+    font-family: var(--font-display);
+    font-size: 0.78rem;
+    letter-spacing: 0.18em;
+    padding: 0.18em 0.7em;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--gold) 18%, transparent);
+    color: var(--gold);
+    border: 1px solid color-mix(in srgb, var(--gold) 35%, transparent);
+  }
+
+  .drafts-title {
+    font-size: 1.15rem;
+    margin: 0;
+  }
+
+  .drafts-meta {
+    font-size: 0.78rem;
+    color: var(--ink3);
+    margin-left: auto;
+  }
+
+  .drafts-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .draft-item {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    padding: 0.55rem 0.85rem;
+    border: 1px dashed var(--line);
+    border-radius: var(--r-md);
+    background: var(--bg1);
+    font-size: 0.92rem;
+  }
+
+  .draft-name {
+    flex: 1;
+    color: var(--ink2);
+    font-weight: 600;
+  }
+
+  .draft-date {
+    font-size: 0.78rem;
+    color: var(--ink3);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .draft-id {
+    font-family: var(--font-mono);
+    font-size: 0.74rem;
+    color: var(--ink3);
+    padding: 0.15em 0.5em;
+    background: var(--bg2);
+    border-radius: 4px;
+  }
+
+  .drafts-hint {
+    margin: 1rem 0 0;
+    font-size: 0.84rem;
+    color: var(--ink2);
+  }
+
+  .drafts-hint code {
+    font-family: var(--font-mono);
+    font-size: 0.88em;
+    background: var(--wash);
+    color: var(--accent-deep);
+    padding: 0.05em 0.4em;
+    border-radius: 4px;
   }
 </style>

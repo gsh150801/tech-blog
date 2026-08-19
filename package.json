@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build && pagefind --site dist",
+    "build:drafts": "INCLUDE_DRAFTS=1 astro build && INCLUDE_DRAFTS=1 pagefind --site dist",
     "preview": "astro preview",
+    "preview:drafts": "INCLUDE_DRAFTS=1 astro preview",
     "astro": "astro"
   },
   "dependencies": {

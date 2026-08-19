@@ -5,9 +5,26 @@ export type Post = CollectionEntry<'posts'>;
 
 const CN_NUM = ['零', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十'];
 
-/** 获取全部文章（默认过滤草稿），按日期倒序 */
+/**
+ * 控制草稿（draft: true）是否参与构建并出现在公开站点上。
+ * - 公开站点（含 Pages CI 构建）下，草稿一律隐藏，避免误发
+ * - 想看草稿？本地运行 `INCLUDE_DRAFTS=1 npm run build` 即可临时编入
+ */
+const INCLUDE_DRAFTS =
+  // 仅在 CI 显式注入或本地开发构建时包含草稿
+  process.env.INCLUDE_DRAFTS === '1' || process.env.NODE_ENV === 'development';
+
+/** 获取全部文章；默认过滤草稿 */
 export async function getAllPosts(): Promise<Post[]> {
-  const posts = await getCollection('posts', ({ data }) => !data.draft);
+  const posts = await getCollection('posts');
+  const filtered = INCLUDE_DRAFTS ? posts : posts.filter(({ data }) => !data.draft);
+  return filtered.sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+}
+
+/** 取草稿（仅在 include drafts 时返回，否则空） */
+export async function getDrafts(): Promise<Post[]> {
+  if (!INCLUDE_DRAFTS) return [];
+  const posts = await getCollection('posts', ({ data }) => data.draft);
   return posts.sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
 }
 
