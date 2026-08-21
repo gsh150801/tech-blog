@@ -79,6 +79,9 @@ function hello(name: string) {
         <button class="ed-btn" id="ed-toggle" type="button" aria-label="切换预览">
           <Icon name="sparkle" size={15} /> 预览
         </button>
+        <button class="ed-btn ed-btn-a" id="ed-appearance" type="button" aria-label="调节编辑区外观" aria-haspopup="true">
+          Aa
+        </button>
         <button class="ed-btn" id="ed-settings" type="button" aria-label="设置">
           <Icon name="external" size={14} /> GitHub 凭据
         </button>
@@ -165,6 +168,36 @@ function hello(name: string) {
       </div>
     </dialog>
 
+    <div class="ed-pop" id="ed-appearance-pop" role="menu" aria-label="编辑区外观" hidden>
+      <div class="ed-pop-group">
+        <div class="ed-pop-label">编辑区主题</div>
+        <div class="ed-pop-options">
+          <button type="button" class="ed-opt" data-set="theme" data-val="paper">
+            <span class="swatch swatch-paper"></span>宣纸
+          </button>
+          <button type="button" class="ed-opt" data-set="theme" data-val="dark">
+            <span class="swatch swatch-dark"></span>深墨
+          </button>
+        </div>
+      </div>
+      <div class="ed-pop-group">
+        <div class="ed-pop-label">正文字号</div>
+        <div class="ed-pop-options">
+          <button type="button" class="ed-opt" data-set="size" data-val="s"><span class="fs fs-s">小</span></button>
+          <button type="button" class="ed-opt" data-set="size" data-val="m"><span class="fs fs-m">中</span></button>
+          <button type="button" class="ed-opt" data-set="size" data-val="l"><span class="fs fs-l">大</span></button>
+        </div>
+      </div>
+      <div class="ed-pop-group">
+        <div class="ed-pop-label">编辑区字体</div>
+        <div class="ed-pop-options">
+          <button type="button" class="ed-opt" data-set="font" data-val="sans">无衬线</button>
+          <button type="button" class="ed-opt" data-set="font" data-val="serif"><span class="fs-serif">衬线</span></button>
+        </div>
+      </div>
+      <div class="ed-pop-tip">选择自动记住，预览区始终跟随站点纸墨主题。</div>
+    </div>
+
     <div class="ed-toast" id="ed-toast" role="status" aria-live="polite" hidden></div>
   </div>
 </Base>
@@ -196,6 +229,8 @@ function hello(name: string) {
     --accent: #ff7448;
     --accent-deep: #ff8f6b;
     --wash: #2e2014;
+    --ed-fs: 0.95rem;
+    --ed-font: 'SF Mono', 'JetBrains Mono', 'Fira Code', ui-monospace, Menlo, Consolas, monospace;
 
     position: fixed;
     inset: 0;
@@ -204,6 +239,33 @@ function hello(name: string) {
     display: flex;
     flex-direction: column;
     z-index: 200;
+  }
+
+  /* 外观档位：字号 */
+  .editor-shell[data-ed-size='s'] { --ed-fs: 0.85rem; }
+  .editor-shell[data-ed-size='m'] { --ed-fs: 0.95rem; }
+  .editor-shell[data-ed-size='l'] { --ed-fs: 1.08rem; }
+
+  /* 外观档位：字体（衬线更接近读书感，适合长文写作） */
+  .editor-shell[data-ed-font='serif'] {
+    --ed-font: 'Songti SC', 'Noto Serif SC', Georgia, 'Times New Roman', serif;
+  }
+
+  /* 外观主题：宣纸（浅色，与站点预览区一致） */
+  .editor-shell[data-ed-theme='paper'] {
+    --bg: #fbf7ec;
+    --panel: #f5efe2;
+    --line: #e3dac4;
+    --ink: #27211a;
+    --ink2: #665d4c;
+    --ink3: #9a917c;
+    --accent: #b93a1a;
+    --accent-deep: #96290d;
+    --wash: #f4e3d6;
+  }
+
+  .editor-shell[data-ed-theme='paper'] .ed-textarea::selection {
+    background: rgba(185, 58, 26, 0.22);
   }
 
   .editor-shell header.ed-bar {
@@ -329,6 +391,110 @@ function hello(name: string) {
     border-color: var(--accent-deep);
     color: #fff6e8;
     box-shadow: 0 4px 14px -3px color-mix(in srgb, var(--accent) 50%, transparent);
+  }
+
+  .ed-btn-a {
+    font-family: 'Fraunces', 'Songti SC', serif;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    padding: 0 0.7rem;
+  }
+
+  /* 外观弹层 */
+  .ed-pop {
+    position: fixed;
+    top: 3.7rem;
+    right: 1rem;
+    z-index: 210;
+    width: 15.5rem;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 0.9rem 1rem 0.7rem;
+    box-shadow: 0 16px 44px -10px rgba(0, 0, 0, 0.45);
+    animation: ed-pop-in 0.22s var(--ease-out);
+  }
+
+  @keyframes ed-pop-in {
+    from {
+      opacity: 0;
+      transform: translateY(-6px) scale(0.98);
+    }
+  }
+
+  .ed-pop-group {
+    margin-bottom: 0.8rem;
+  }
+
+  .ed-pop-label {
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    color: var(--ink3);
+    margin-bottom: 0.4rem;
+  }
+
+  .ed-pop-options {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+  }
+
+  .ed-opt {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4em;
+    padding: 0.38em 0.8em;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: var(--bg);
+    color: var(--ink2);
+    font-size: 0.82rem;
+    transition: border-color 0.15s, color 0.15s, background-color 0.15s, transform 0.15s var(--ease-spring);
+  }
+
+  .ed-opt:hover {
+    border-color: var(--ink3);
+    color: var(--ink);
+    transform: translateY(-1px);
+  }
+
+  .ed-opt.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 10%, transparent);
+    font-weight: 600;
+  }
+
+  .swatch {
+    width: 0.85em;
+    height: 0.85em;
+    border-radius: 4px;
+    border: 1px solid var(--line);
+    flex: none;
+  }
+
+  .swatch-paper {
+    background: #fbf7ec;
+  }
+
+  .swatch-dark {
+    background: #1a1612;
+  }
+
+  .fs-serif {
+    font-family: 'Songti SC', 'Noto Serif SC', Georgia, serif;
+  }
+
+  .fs-s { font-size: 0.72em; }
+  .fs-m { font-size: 0.86em; }
+  .fs-l { font-size: 1em; }
+
+  .ed-pop-tip {
+    font-size: 0.72rem;
+    color: var(--ink3);
+    border-top: 1px dashed var(--line);
+    padding-top: 0.6rem;
+    line-height: 1.6;
   }
 
   .ed-icon {
@@ -457,11 +623,12 @@ function hello(name: string) {
     padding: 1.2rem 1.5rem;
     background: transparent;
     color: var(--ink);
-    font-family: 'SF Mono', 'JetBrains Mono', 'Fira Code', ui-monospace, Menlo, Consolas, monospace;
-    font-size: 0.95rem;
+    font-family: var(--ed-font);
+    font-size: var(--ed-fs);
     line-height: 1.85;
     tab-size: 2;
     caret-color: var(--accent);
+    transition: color 0.25s, background-color 0.25s;
   }
 
   .ed-textarea::placeholder {
@@ -766,8 +933,7 @@ function hello(name: string) {
   }
 
   /* Toast */
-  .ed-toast {
-    position: fixed;
+  .ed-toast {    position: fixed;
     bottom: 1.4rem;
     left: 50%;
     transform: translateX(-50%) translateY(20px);
@@ -1299,6 +1465,66 @@ function hello(name: string) {
     closeSettings();
     showToast('凭据已保存到本机浏览器 ✓', 'success');
   });
+
+  // ============================================================
+  // 6.5) 外观调节（主题 / 字号 / 字体），localStorage 持久化
+  // ============================================================
+  const pop = $('ed-appearance-pop');
+  const appearanceKeys: Record<string, string> = {
+    theme: 'ed_theme',
+    size: 'ed_fontsize',
+    font: 'ed_font',
+  };
+  const appearanceDefaults: Record<string, string> = { theme: 'dark', size: 'm', font: 'sans' };
+
+  function applyAppearance() {
+    const vals: Record<string, string> = {};
+    for (const [key, lsKey] of Object.entries(appearanceKeys)) {
+      const v = localStorage.getItem(lsKey) || appearanceDefaults[key];
+      vals[key] = v;
+    }
+    shell.dataset.edTheme = vals.theme;
+    shell.dataset.edSize = vals.size;
+    shell.dataset.edFont = vals.font;
+    // 同步按钮高亮
+    pop.querySelectorAll<HTMLButtonElement>('.ed-opt').forEach((b) => {
+      b.classList.toggle('active', vals[b.dataset.set!] === b.dataset.val);
+    });
+    return vals;
+  }
+
+  function togglePop(force?: boolean) {
+    const show = force ?? pop.hidden;
+    pop.hidden = !show;
+  }
+
+  $('ed-appearance').addEventListener('click', (e) => {
+    e.stopPropagation();
+    togglePop();
+  });
+
+  pop.addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('.ed-opt');
+    if (!btn) return;
+    const key = btn.dataset.set!;
+    localStorage.setItem(appearanceKeys[key], btn.dataset.val!);
+    applyAppearance();
+  });
+
+  // 点击弹层外关闭
+  document.addEventListener('click', (e) => {
+    if (pop.hidden) return;
+    if (!(e.target as HTMLElement).closest('#ed-appearance-pop, #ed-appearance')) {
+      pop.hidden = true;
+    }
+  });
+
+  // Escape 关闭
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !pop.hidden) pop.hidden = true;
+  });
+
+  applyAppearance();
 
   // ============================================================
   // 7) 监听输入 & 快捷键
