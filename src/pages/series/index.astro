@@ -1,16 +1,12 @@
 ---
 import Base from '../../layouts/Base.astro';
 import Icon from '../../components/Icon.astro';
-import { SITE, SERIES_META } from '../../config';
+import { SITE } from '../../config';
 import { withBase } from '../../utils/path';
-import { getAllPosts, getSeries, cnVolume, seriesSlug } from '../../utils/posts';
+import { getAllPosts, resolveSeries, cnVolume } from '../../utils/posts';
 
 const posts = await getAllPosts();
-const series = [...getSeries(posts).entries()].map(([name, list]) => {
-  // 优先用系列内显式声明的 seriesSlug（ASCII），否则用 %xx 编码
-  const explicit = list.find((p) => p.data.seriesSlug)?.data.seriesSlug;
-  return { name, list, slug: seriesSlug(name, explicit) };
-});
+const series = resolveSeries(posts);
 ---
 
 <Base title="合集" description="按主题整理的系列文章合集，适合系统性地阅读与分享。">
@@ -22,27 +18,46 @@ const series = [...getSeries(posts).entries()].map(([name, list]) => {
       </p>
     </header>
 
+    <div class="manage-row reveal">
+      <a class="manage-link" href={withBase('/series/manage/')}>
+        <Icon name="pen" size={14} />
+        管理合集（新建 / 改名 / 删除）
+      </a>
+    </div>
+
     <div class="series-list">
       {
-        series.map(({ name, list, slug }, i) => (
+        series.map((s, i) => (
           <a
             class="s-card reveal"
-            href={withBase(`/series/${slug}/`)}
+            href={withBase(`/series/${s.slug}/`)}
             style={`--rd:${Math.min(i, 5) * 0.06}s`}
           >
             <div class="s-vol" aria-hidden="true">
               <span class="v-text">卷{cnVolume(i + 1)}</span>
             </div>
             <div class="s-body">
-              <h2 class="s-name">{name}</h2>
-              <p class="s-desc">{SERIES_META[name]?.description ?? '一个持续更新的主题合集。'}</p>
+              <h2 class="s-name">{s.name}</h2>
+              <p class="s-desc">
+                {s.description ?? '一个持续更新的主题合集。'}
+              </p>
               <div class="s-meta">
-                <span>{list.length} 篇</span>
-                <span class="dot-sep" />
-                <span>
-                  最近更新 {list[list.length - 1].data.date.getFullYear()} 年
-                  {list[list.length - 1].data.date.getMonth() + 1} 月
-                </span>
+                <span>{s.posts.length > 0 ? `${s.posts.length} 篇` : '待开卷'}</span>
+                {s.posts.length > 0 && (
+                  <>
+                    <span class="dot-sep" />
+                    <span>
+                      最近更新 {Math.max(...s.posts.map((p) => p.data.date.getFullYear()))} 年
+                      {Math.max(...s.posts.map((p) => p.data.date.getMonth() + 1))} 月
+                    </span>
+                  </>
+                )}
+                {!s.registered && (
+                  <>
+                    <span class="dot-sep" />
+                    <span class="s-unreg">仅由文章携带</span>
+                  </>
+                )}
               </div>
             </div>
             <span class="s-arrow">
@@ -168,6 +183,32 @@ const series = [...getSeries(posts).entries()].map(([name, list]) => {
   .s-card:hover .s-arrow {
     color: var(--accent);
     transform: translateX(5px);
+  }
+
+  .manage-row {
+    margin: -1.2rem 0 1.6rem;
+  }
+
+  .manage-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4em;
+    font-size: 0.85rem;
+    color: var(--ink2);
+    padding: 0.4em 1em;
+    border: 1px dashed var(--line2);
+    border-radius: 999px;
+    transition: color 0.2s, border-color 0.2s, background-color 0.2s;
+  }
+
+  .manage-link:hover {
+    color: var(--accent-ink);
+    border-color: var(--accent);
+    background: var(--wash);
+  }
+
+  .s-unreg {
+    color: var(--gold);
   }
 
   @media (max-width: 560px) {

@@ -1,9 +1,30 @@
 import { getCollection, type CollectionEntry } from 'astro:content';
 import { withBase } from './path';
+import seriesRegistry from '../data/series.json';
 
 export type Post = CollectionEntry<'posts'>;
 
 const CN_NUM = ['零', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十'];
+
+/** 合集注册表（src/data/series.json），管理台在线编辑的就是这个文件 */
+export interface SeriesDef {
+  name: string;
+  slug: string;
+  description?: string;
+}
+
+export interface SeriesEntry {
+  name: string;
+  slug: string;
+  description?: string;
+  /** 是否在注册表中定义（false = 仅由文章 frontmatter 携带） */
+  registered: boolean;
+  posts: Post[];
+}
+
+export function getSeriesRegistry(): SeriesDef[] {
+  return (seriesRegistry as SeriesDef[]).filter((s) => s && s.name);
+}
 
 /**
  * 控制草稿（draft: true）是否参与构建并出现在公开站点上。
@@ -51,7 +72,7 @@ export function getAllTags(posts: Post[]): [tag: string, count: number][] {
   return [...map.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'zh'));
 }
 
-/** 合集 -> 文章列表（合集内按 seriesOrder 升序，缺省按日期正序） */
+/** 合集 -> 文章列表（合集内按 seriesOrder 升序，缺省按日期正序）；旧接口，见 resolveSeries */
 export function getSeries(posts: Post[]): Map<string, Post[]> {
   const map = new Map<string, Post[]>();
   for (const p of posts) {
@@ -67,13 +88,59 @@ export function getSeries(posts: Post[]): Map<string, Post[]> {
       return oa !== ob ? oa - ob : a.data.date.valueOf() - b.data.date.valueOf();
     });
   }
-  return new Map(
-    [...map.entries()].sort((a, b) => {
-      const ta = a[1][0]?.data.date.valueOf() ?? 0;
-      const tb = b[1][0]?.data.date.valueOf() ?? 0;
-      return tb - ta;
-    }),
-  );
+  return map;
+}
+
+function sortSeriesPosts(list: Post[]) {
+  list.sort((a, b) => {
+    const oa = a.data.seriesOrder ?? Number.MAX_SAFE_INTEGER;
+    const ob = b.data.seriesOrder ?? Number.MAX_SAFE_INTEGER;
+    return oa !== ob ? oa - ob : a.data.date.valueOf() - b.data.date.valueOf();
+  });
+}
+
+/**
+ * 合集全量解析：注册表定义 ∪ 文章 frontmatter 携带的 series 取并集。
+ * slug 优先级：注册表 > 文章 seriesSlug > 合集名编码。
+ * 有文章的合集按最新文章日期倒序，空合集（先建卷后写作）排最后。
+ */
+export function resolveSeries(posts: Post[]): SeriesEntry[] {
+  const registry = getSeriesRegistry();
+  const byName = new Map<string, Post[]>();
+  for (const p of posts) {
+    if (!p.data.series) continue;
+    const list = byName.get(p.data.series) ?? [];
+    list.push(p);
+    byName.set(p.data.series, list);
+  }
+
+  const names = new Set<string>([...registry.map((r) => r.name), ...byName.keys()]);
+  const entries: SeriesEntry[] = [];
+  for (const name of names) {
+    const reg = registry.find((r) => r.name === name);
+    const list = byName.get(name) ?? [];
+    sortSeriesPosts(list);
+    const slug =
+      reg?.slug ??
+      list.find((p) => p.data.seriesSlug)?.data.seriesSlug ??
+      encodeURIComponent(name);
+    entries.push({
+      name,
+      slug,
+      description: reg?.description,
+      registered: !!reg,
+      posts: list,
+    });
+  }
+
+  entries.sort((a, b) => {
+    const ta = a.posts.length ? Math.max(...a.posts.map((p) => p.data.date.valueOf())) : 0;
+    const tb = b.posts.length ? Math.max(...b.posts.map((p) => p.data.date.valueOf())) : 0;
+    if (ta !== tb) return tb - ta;
+    if (!!a.posts.length !== !!b.posts.length) return a.posts.length ? -1 : 1;
+    return a.name.localeCompare(b.name, 'zh');
+  });
+  return entries;
 }
 
 /** 合集在系列页的 slug：

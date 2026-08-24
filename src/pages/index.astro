@@ -5,15 +5,12 @@ import FeatureCard from '../components/FeatureCard.astro';
 import PostRow from '../components/PostRow.astro';
 import { SITE } from '../config';
 import { withBase } from '../utils/path';
-import { getAllPosts, getAllTags, getSeries, cnVolume, seriesSlug } from '../utils/posts';
+import { getAllPosts, getAllTags, resolveSeries, cnVolume } from '../utils/posts';
 
 const posts = await getAllPosts();
 const pinned = posts.find((p) => p.data.pinned) ?? posts[0];
 const latest = posts.filter((p) => p.id !== pinned?.id).slice(0, 6);
-const series = [...getSeries(posts).entries()].map(([name, list]) => {
-  const explicit = list.find((p) => p.data.seriesSlug)?.data.seriesSlug;
-  return { name, list, slug: explicit ?? encodeURIComponent(name) };
-});
+const series = resolveSeries(posts).filter((s) => s.posts.length > 0);
 const tags = getAllTags(posts);
 ---
 
@@ -107,16 +104,16 @@ const tags = getAllTags(posts);
             </a>
           </header>
 <div class="series-grid">
-        {series.slice(0, 3).map(({ name, list, slug }, i) => (
+        {series.slice(0, 3).map((s, i) => (
           <a
             class="series-card reveal"
-            href={withBase(`/series/${slug}/`)}
+            href={withBase(`/series/${s.slug}/`)}
             style={`--rd:${i * 0.07}s`}
           >
             <span class="sc-vol v-text">卷{cnVolume(i + 1)}</span>
             <div class="sc-body">
-              <h3 class="sc-name">{name}</h3>
-              <p class="sc-desc">{list.length} 篇 · 持续更新中</p>
+              <h3 class="sc-name">{s.name}</h3>
+              <p class="sc-desc">{s.posts.length} 篇 · 持续更新中</p>
             </div>
             <span class="sc-arrow">
               <Icon name="arrow-right" size={18} />

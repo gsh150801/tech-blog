@@ -46,13 +46,6 @@ export const GISCUS = {
 } as const;
 
 /**
- * 合集的展示信息（按合集名匹配；未配置的合集会退化为仅显示名称）
+ * 合集注册表已迁移到 src/data/series.json，
+ * 可在站内「合集管理台」（/series/manage/）在线新建 / 改名 / 删除。
  */
-export const SERIES_META: Record<string, { description?: string }> = {
-  从零搭建一个高性能博客: {
-    description: '用一个真实站点当例子：从选型、设计到部署 GitHub Pages 的完整实录。',
-  },
-  写作指南: {
-    description: '本站支持的所有 Markdown 写作姿势，一篇看懂。',
-  },
-};

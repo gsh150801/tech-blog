@@ -1,0 +1,12 @@
+[
+  {
+    "name": "从零搭建一个高性能博客",
+    "slug": "build-high-perf-blog",
+    "description": "用一个真实站点当例子：从选型、设计到部署 GitHub Pages 的完整实录。"
+  },
+  {
+    "name": "写作指南",
+    "slug": "writing-guide",
+    "description": "本站支持的所有 Markdown 写作姿势，一篇看懂。"
+  }
+]

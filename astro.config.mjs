@@ -11,7 +11,8 @@ export default defineConfig({
   trailingSlash: 'ignore',
   integrations: [
     sitemap({
-      filter: (page) => !page.includes('/404') && !page.includes('/posts/editor'),
+      filter: (page) =>
+        !page.includes('/404') && !page.includes('/posts/editor') && !page.includes('/series/manage'),
     }),
   ],
   markdown: {

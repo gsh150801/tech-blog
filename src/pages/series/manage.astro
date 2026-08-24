@@ -1,0 +1,787 @@
+---
+import Base from '../../layouts/Base.astro';
+import Icon from '../../components/Icon.astro';
+import { SITE } from '../../config';
+import { withBase } from '../../utils/path';
+---
+
+<Base
+  title="合集管理"
+  description="在线新建、改名、编辑、删除合集 —— 所有改动直接提交到 GitHub，约 40 秒后站点自动更新。"
+  noindex
+>
+  <div class="container container-narrow">
+    <header class="page-head reveal">
+      <p class="head-kicker">
+        <Icon name="folder" size={14} /> 合集管理台
+      </p>
+      <h1 class="page-title">管理合集</h1>
+      <p class="page-desc">
+        新建、改名、改描述、删除合集。改名会自动同步所有成员文章；删除合集<strong>不会删文章</strong>，只是解除归卷。
+      </p>
+      <a class="back-link u-link" href={withBase('/series/')}>← 返回合集书架</a>
+    </header>
+
+    <!-- 凭据卡片 -->
+    <section class="card cred-card reveal" id="cred-card" hidden>
+      <h2 class="card-title"><Icon name="external" size={15} /> GitHub 凭据</h2>
+      <p class="card-desc">
+        与在线编辑器共用同一套凭据（只存本机浏览器）。需要一个有 <code>repo</code> 权限的
+        <a href="https://github.com/settings/tokens?type=beta" target="_blank" rel="noopener noreferrer">Personal Access Token</a>。
+      </p>
+      <div class="field-row">
+        <label class="field">
+          <span>仓库</span>
+          <input id="cfg-repo" type="text" value={SITE.repo} spellcheck="false" />
+        </label>
+        <label class="field field-narrow">
+          <span>分支</span>
+          <input id="cfg-branch" type="text" value="main" spellcheck="false" />
+        </label>
+      </div>
+      <label class="field">
+        <span>Token</span>
+        <input id="cfg-token" type="password" placeholder="ghp_…" autocomplete="off" />
+      </label>
+      <div class="card-actions">
+        <button class="btn btn-primary" id="cfg-save" type="button">保存并加载</button>
+      </div>
+    </section>
+
+    <!-- 主体（凭据就绪后显示） -->
+    <div id="app" hidden>
+      <!-- 新建 -->
+      <section class="card reveal">
+        <h2 class="card-title"><Icon name="sparkle" size={15} /> 新建合集</h2>
+        <div class="field-row">
+          <label class="field">
+            <span>合集名（中文可）</span>
+            <input id="new-name" type="text" placeholder="例：LLM 推理优化" />
+          </label>
+          <label class="field">
+            <span>URL slug（必填小写字母/数字/-）</span>
+            <input id="new-slug" type="text" placeholder="例：llm-inference-opt" spellcheck="false" />
+          </label>
+        </div>
+        <label class="field">
+          <span>描述（可选）</span>
+          <input id="new-desc" type="text" placeholder="一句话介绍这一卷写什么" />
+        </label>
+        <div class="card-actions">
+          <span class="hint">建好后写文章时把 frontmatter 的 <code>series</code> 填成合集名即可自动归卷。</span>
+          <button class="btn btn-primary" id="btn-create" type="button">
+            <Icon name="check" size={14} /> 创建
+          </button>
+        </div>
+      </section>
+
+      <!-- 列表 -->
+      <section class="reveal">
+        <div class="list-head">
+          <h2 class="card-title"><Icon name="folder" size={15} /> 全部合集</h2>
+          <button class="btn btn-sm" id="btn-refresh" type="button">刷新</button>
+        </div>
+        <div id="series-list" class="series-list"></div>
+      </section>
+    </div>
+
+    <!-- 操作弹窗 -->
+    <dialog id="dlg" class="dlg">
+      <div class="dlg-box">
+        <header class="dlg-head">
+          <h2 id="dlg-title">操作</h2>
+          <button class="icon-btn" id="dlg-x" type="button" aria-label="关闭">
+            <Icon name="close" size={16} />
+          </button>
+        </header>
+        <div id="dlg-body" class="dlg-body"></div>
+        <div class="dlg-actions">
+          <button class="btn" id="dlg-cancel" type="button">取消</button>
+          <button class="btn btn-primary" id="dlg-ok" type="button">确认</button>
+        </div>
+      </div>
+    </dialog>
+
+    <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+  </div>
+</Base>
+
+<style>
+  .container-narrow {
+    max-width: 52rem;
+    padding-bottom: 3rem;
+  }
+
+  .page-head {
+    padding: 3rem 0 1.8rem;
+  }
+
+  .head-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4em;
+    margin: 0;
+    font-size: 0.78rem;
+    letter-spacing: 0.3em;
+    color: var(--ink3);
+    font-weight: 600;
+  }
+
+  .page-title {
+    font-size: clamp(1.8rem, 4.5vw, 2.4rem);
+    margin: 0.5rem 0 0;
+  }
+
+  .page-desc {
+    margin: 0.7rem 0 0;
+    color: var(--ink2);
+    max-width: 40rem;
+    line-height: 1.85;
+  }
+
+  .back-link {
+    display: inline-block;
+    margin-top: 1rem;
+    font-size: 0.85rem;
+    color: var(--ink2);
+  }
+
+  .card {
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    background: var(--bg1);
+    padding: 1.4rem 1.6rem;
+    margin-bottom: 1.2rem;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .card-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.1rem;
+    margin: 0 0 0.6rem;
+  }
+
+  .card-desc {
+    margin: 0 0 1rem;
+    font-size: 0.88rem;
+    color: var(--ink2);
+    line-height: 1.75;
+  }
+
+  .card-desc code,
+  .hint code {
+    font-family: var(--font-mono);
+    font-size: 0.88em;
+    background: var(--wash);
+    padding: 0.05em 0.4em;
+    border-radius: 4px;
+  }
+
+  .card-desc a {
+    color: var(--accent-ink);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .field-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.9rem;
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    margin-bottom: 0.9rem;
+    font-size: 0.8rem;
+    color: var(--ink2);
+  }
+
+  .field-narrow {
+    max-width: 9rem;
+  }
+
+  .field input {
+    background: var(--bg0);
+    border: 1px solid var(--line);
+    color: var(--ink);
+    padding: 0.55rem 0.75rem;
+    border-radius: var(--r-sm);
+    font: inherit;
+    font-size: 0.92rem;
+    transition: border-color 0.2s;
+  }
+
+  .field input:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  .card-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    justify-content: flex-end;
+  }
+
+  .hint {
+    margin-right: auto;
+    font-size: 0.78rem;
+    color: var(--ink3);
+    max-width: 24rem;
+    line-height: 1.6;
+  }
+
+  .btn-sm {
+    height: 2.1rem;
+    padding: 0 0.9rem;
+    font-size: 0.82rem;
+  }
+
+  .list-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.8rem;
+  }
+
+  .list-head .card-title {
+    margin: 0;
+  }
+
+  .series-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+  }
+
+  .s-row {
+    display: flex;
+    align-items: center;
+    gap: 1.1rem;
+    padding: 1.05rem 1.25rem;
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    background: var(--bg1);
+    flex-wrap: wrap;
+  }
+
+  .s-row.busy {
+    opacity: 0.55;
+    pointer-events: none;
+  }
+
+  .s-info {
+    flex: 1;
+    min-width: 14rem;
+  }
+
+  .s-name {
+    font-family: var(--font-display);
+    font-weight: 640;
+    font-size: 1.05rem;
+  }
+
+  .s-slug {
+    font-family: var(--font-mono);
+    font-size: 0.76rem;
+    color: var(--ink3);
+  }
+
+  .s-desc {
+    margin: 0.25rem 0 0;
+    font-size: 0.85rem;
+    color: var(--ink2);
+  }
+
+  .s-count {
+    flex: none;
+    font-size: 0.82rem;
+    color: var(--ink2);
+    padding: 0.25em 0.85em;
+    border: 1px solid var(--line2);
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+
+  .badge-unreg {
+    font-size: 0.7rem;
+    color: var(--gold);
+    border: 1px dashed color-mix(in srgb, var(--gold) 50%, transparent);
+    border-radius: 999px;
+    padding: 0.12em 0.7em;
+    white-space: nowrap;
+  }
+
+  .s-ops {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+  }
+
+  .op-btn {
+    padding: 0.38em 0.9em;
+    font-size: 0.8rem;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    color: var(--ink2);
+    background: var(--bg0);
+    transition: border-color 0.2s, color 0.2s, background-color 0.2s;
+  }
+
+  .op-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent-ink);
+    background: var(--wash);
+  }
+
+  .op-btn.danger:hover {
+    border-color: #c0392b;
+    color: #c0392b;
+    background: color-mix(in srgb, #c0392b 8%, transparent);
+  }
+
+  .dlg::backdrop {
+    background: rgb(20 14 6 / 55%);
+    backdrop-filter: blur(6px);
+  }
+
+  .dlg-box {
+    width: min(30rem, calc(100% - 2rem));
+    background: var(--bg1);
+    border: 1px solid var(--line2);
+    border-radius: var(--r-lg);
+    padding: 1.4rem 1.5rem 1.2rem;
+    box-shadow: var(--shadow-lg);
+  }
+
+  .dlg-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.8rem;
+  }
+
+  .dlg-head h2 {
+    font-size: 1.12rem;
+    margin: 0;
+  }
+
+  .dlg-body {
+    font-size: 0.92rem;
+    color: var(--ink2);
+    line-height: 1.75;
+  }
+
+  .dlg-body .field {
+    margin-top: 0.7rem;
+  }
+
+  .dlg-body .warn {
+    color: #c0392b;
+    font-size: 0.84rem;
+  }
+
+  .dlg-body ul {
+    margin: 0.5rem 0;
+    padding-left: 1.2em;
+    font-size: 0.86rem;
+  }
+
+  .dlg-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.6rem;
+    margin-top: 1.2rem;
+  }
+
+  .toast {
+    position: fixed;
+    bottom: 1.4rem;
+    left: 50%;
+    transform: translateX(-50%) translateY(16px);
+    background: var(--bg1);
+    color: var(--ink);
+    border: 1px solid var(--line2);
+    padding: 0.7rem 1.3rem;
+    border-radius: 999px;
+    font-size: 0.88rem;
+    box-shadow: var(--shadow-md);
+    z-index: 60;
+    opacity: 0;
+    transition: opacity 0.25s, transform 0.25s var(--ease-spring);
+  }
+
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  .toast.success { border-color: var(--teal); }
+  .toast.error { border-color: var(--accent); color: var(--accent-ink); }
+
+  @media (max-width: 640px) {
+    .field-row {
+      grid-template-columns: 1fr;
+    }
+
+    .card-actions {
+      flex-direction: column-reverse;
+      align-items: stretch;
+    }
+
+    .hint {
+      margin-right: 0;
+      max-width: none;
+    }
+  }
+</style>
+
+<script>
+  // ============================================================
+  // 合集管理台：注册表(src/data/series.json) + 成员文章 的在线 CRUD
+  // 凭据与编辑器共用（localStorage: ed_repo / ed_branch / ed_token）
+  // ============================================================
+  const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
+  const SERIES_PATH = 'src/data/series.json';
+  const POSTS_DIR = 'src/content/posts';
+
+  const toast = $('toast');
+  let toastTimer: ReturnType<typeof setTimeout>;
+  function showToast(msg: string, kind: 'success' | 'error' | 'info' = 'info') {
+    toast.textContent = msg;
+    toast.className = 'toast show ' + (kind === 'info' ? '' : kind);
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => (toast.className = 'toast'), 3000);
+  }
+
+  interface Cfg { repo: string; branch: string; token: string }
+  function readCfg(): Cfg {
+    return {
+      repo: localStorage.getItem('ed_repo') || '',
+      branch: localStorage.getItem('ed_branch') || 'main',
+      token: localStorage.getItem('ed_token') || '',
+    };
+  }
+
+  async function gh(path: string, init?: RequestInit): Promise<any> {
+    const cfg = readCfg();
+    const res = await fetch(`https://api.github.com${path}`, {
+      ...init,
+      headers: {
+        Authorization: `Bearer ${cfg.token}`,
+        Accept: 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28',
+        ...(init?.body ? { 'Content-Type': 'application/json' } : {}),
+        ...(init?.headers ?? {}),
+      },
+    });
+    if (!res.ok) {
+      const t = await res.text();
+      throw new Error(`HTTP ${res.status} · ${t.slice(0, 120)}`);
+    }
+    return res.status === 204 ? null : res.json();
+  }
+
+  const b64e = (s: string) => btoa(unescape(encodeURIComponent(s)));
+  const b64d = (s: string) => decodeURIComponent(escape(atob(s.replace(/\n/g, ''))));
+
+  // ---------- 状态 ----------
+  interface RegistryItem { name: string; slug: string; description?: string }
+  interface PostFile { name: string; sha: string; content: string; series: string | null }
+  let registry: RegistryItem[] = [];
+  let registrySha = '';
+  let postFiles: PostFile[] = [];
+
+  function parseSeriesOf(content: string): string | null {
+    const fm = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+    if (!fm) return null;
+    const m = fm[1].match(/^series:\s*(.+)$/m);
+    if (!m) return null;
+    const v = m[1].trim();
+    if (!v || v === 'null') return null;
+    return v.replace(/^["']|["']$/g, '');
+  }
+
+  async function loadAll() {
+    showToast('正在加载合集与文章…');
+    const cfg = readCfg();
+    const [regRes, dirRes] = await Promise.all([
+      gh(`/repos/${cfg.repo}/contents/${SERIES_PATH}?ref=${cfg.branch}`),
+      gh(`/repos/${cfg.repo}/contents/${POSTS_DIR}?ref=${cfg.branch}`),
+    ]);
+    registrySha = regRes.sha;
+    registry = JSON.parse(b64d(regRes.content));
+
+    const files = (dirRes as any[]).filter((f) => f.name.endsWith('.md'));
+    const contents = await Promise.all(
+      files.map((f) => gh(`/repos/${cfg.repo}/contents/${f.path}?ref=${cfg.branch}`)),
+    );
+    postFiles = contents.map((c: any, i) => ({
+      name: files[i].name,
+      sha: c.sha,
+      content: b64d(c.content),
+      series: parseSeriesOf(b64d(c.content)),
+    }));
+    render();
+    showToast(`已加载 ${registry.length} 个合集 · ${postFiles.length} 篇文章`, 'success');
+  }
+
+  async function putFile(path: string, text: string, message: string, sha?: string) {
+    const cfg = readCfg();
+    const body: any = { message, branch: cfg.branch, content: b64e(text) };
+    if (sha) body.sha = sha;
+    const res = await gh(`/repos/${cfg.repo}/contents/${path}`, { method: 'PUT', body: JSON.stringify(body) });
+    return res.content.sha as string;
+  }
+
+  async function saveRegistry(next: RegistryItem[], message: string) {
+    const text = JSON.stringify(next, null, 2) + '\n';
+    registrySha = await putFile(SERIES_PATH, text, message, registrySha);
+    registry = next;
+  }
+
+  // ---------- 渲染 ----------
+  function render() {
+    const list = $('series-list');
+    // 注册表 ∪ 文章携带
+    const names = new Set<string>([...registry.map((r) => r.name)]);
+    const counts = new Map<string, number>();
+    for (const p of postFiles) {
+      if (!p.series) continue;
+      names.add(p.series);
+      counts.set(p.series, (counts.get(p.series) ?? 0) + 1);
+    }
+
+    list.innerHTML = '';
+    for (const name of names) {
+      const reg = registry.find((r) => r.name === name);
+      const n = counts.get(name) ?? 0;
+      const row = document.createElement('div');
+      row.className = 's-row';
+      row.dataset.name = name;
+      row.innerHTML = `
+        <div class="s-info">
+          <div class="s-name"></div>
+          <div class="s-slug"></div>
+          ${reg?.description ? '<p class="s-desc"></p>' : ''}
+        </div>
+        ${reg ? '' : '<span class="badge-unreg">未注册（仅文章携带）</span>'}
+        <span class="s-count">${n} 篇</span>
+        <div class="s-ops">
+          ${reg ? '' : '<button class="op-btn" data-op="adopt" type="button">收录进注册表</button>'}
+          <button class="op-btn" data-op="rename" type="button">改名</button>
+          <button class="op-btn" data-op="edit" type="button">编辑</button>
+          <button class="op-btn danger" data-op="delete" type="button">删除</button>
+        </div>`;
+      (row.querySelector('.s-name') as HTMLElement).textContent = name;
+      (row.querySelector('.s-slug') as HTMLElement).textContent = `/series/${reg?.slug ?? encodeURIComponent(name)}/`;
+      if (reg?.description) (row.querySelector('.s-desc') as HTMLElement).textContent = reg.description;
+      list.appendChild(row);
+    }
+  }
+
+  // ---------- 弹窗 ----------
+  const dlg = $('dlg') as HTMLDialogElement;
+  let dlgAction: (() => Promise<void>) | null = null;
+
+  function openDlg(title: string, bodyHTML: string, action: () => Promise<void>, okText = '确认') {
+    $('dlg-title').textContent = title;
+    $('dlg-body').innerHTML = bodyHTML;
+    $('dlg-ok').textContent = okText;
+    dlgAction = action;
+    dlg.showModal();
+  }
+
+  $('dlg-x').addEventListener('click', () => dlg.close());
+  $('dlg-cancel').addEventListener('click', () => dlg.close());
+  $('dlg-ok').addEventListener('click', async () => {
+    if (!dlgAction) return;
+    const ok = $('dlg-ok') as HTMLButtonElement;
+    ok.disabled = true;
+    ok.textContent = '提交中…';
+    try {
+      await dlgAction();
+      dlg.close();
+      await loadAll();
+    } catch (e) {
+      showToast(`失败：${(e as Error).message}`, 'error');
+    } finally {
+      ok.disabled = false;
+      ok.textContent = '确认';
+      dlgAction = null;
+    }
+  });
+
+  function field(label: string, id: string, value = '', ph = '') {
+    return `<label class="field"><span>${label}</span><input id="${id}" type="text" value="${value
+      .replace(/&/g, '&amp;')
+      .replace(/"/g, '&quot;')}" placeholder="${ph}" spellcheck="false" /></label>`;
+  }
+
+  // ---------- 操作 ----------
+  const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+  // 新建
+  $('btn-create').addEventListener('click', async () => {
+    const name = ($('new-name') as HTMLInputElement).value.trim();
+    const slug = ($('new-slug') as HTMLInputElement).value.trim();
+    const description = ($('new-desc') as HTMLInputElement).value.trim();
+    if (!name) return showToast('合集名不能为空', 'error');
+    if (!SLUG_RE.test(slug)) return showToast('slug 必须是小写字母/数字/中划线（如 my-series）', 'error');
+    if (registry.some((r) => r.name === name)) return showToast('已存在同名合集', 'error');
+    if (registry.some((r) => r.slug === slug)) return showToast('已存在同名 slug', 'error');
+    try {
+      const btn = $('btn-create') as HTMLButtonElement;
+      btn.disabled = true;
+      const next = [...registry, { name, slug, ...(description ? { description } : {}) }];
+      await saveRegistry(next, `series: create "${name}"`);
+      showToast('合集已创建 ✓ 部署约 40 秒后生效', 'success');
+      $('new-name').value = ''; $('new-slug').value = ''; $('new-desc').value = '';
+      await loadAll();
+    } catch (e) {
+      showToast(`创建失败：${(e as Error).message}`, 'error');
+    } finally {
+      ($('btn-create') as HTMLButtonElement).disabled = false;
+    }
+  });
+
+  // 列表按钮（事件委托）
+  $('series-list').addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-op]');
+    if (!btn) return;
+    const row = btn.closest('.s-row') as HTMLElement;
+    const name = row.dataset.name!;
+    const reg = registry.find((r) => r.name === name);
+    const members = postFiles.filter((p) => p.series === name);
+    const op = btn.dataset.op;
+
+    if (op === 'adopt') {
+      openDlg(
+        '收录进注册表',
+        `<p>把「${name}」写进注册表，补全 slug 和描述：</p>` +
+          field('URL slug', 'f-slug', '', 'my-series') +
+          field('描述', 'f-desc', ''),
+        async () => {
+          const slug = ($('f-slug') as HTMLInputElement).value.trim();
+          if (!SLUG_RE.test(slug)) throw new Error('slug 格式不对');
+          await saveRegistry(
+            [...registry, { name, slug }],
+            `series: register "${name}"`,
+          );
+          showToast('已收录 ✓', 'success');
+        },
+      );
+    }
+
+    if (op === 'rename') {
+      openDlg(
+        '重命名合集',
+        `<p>将「${name}」改名为：${
+          members.length ? `<br /><span class="warn">会同步改写 ${members.length} 篇成员文章的 frontmatter（每篇一个提交）。</span>` : ''
+        }</p>` + field('新合集名', 'f-name', name),
+        async () => {
+          const nn = ($('f-name') as HTMLInputElement).value.trim();
+          if (!nn || nn === name) throw new Error('名字没变');
+          if (registry.some((r) => r.name === nn)) throw new Error('已存在同名合集');
+          for (const p of members) {
+            const next = p.content.replace(/^series:.*$/m, `series: ${JSON.stringify(nn)}`);
+            p.sha = await putFile(`${POSTS_DIR}/${p.name}`, next, `series: move "${name}" → "${nn}" (${p.name})`, p.sha);
+            p.content = next;
+            p.series = nn;
+          }
+          if (reg) {
+            await saveRegistry(
+              registry.map((r) => (r.name === name ? { ...r, name: nn } : r)),
+              `series: rename "${name}" → "${nn}"`,
+            );
+          }
+          showToast(`已改名 ✓（${members.length} 篇文章已同步）`, 'success');
+        },
+        '改名并同步',
+      );
+    }
+
+    if (op === 'edit') {
+      if (!reg) return showToast('该合集未注册，请先「收录进注册表」', 'error');
+      openDlg(
+        '编辑合集',
+        field('描述', 'f-desc', reg.description ?? '') +
+          field('URL slug', 'f-slug', reg.slug, 'my-series') +
+          (members.length ? '<p class="warn">注意：改 slug 会改变合集页网址。</p>' : ''),
+        async () => {
+          const description = ($('f-desc') as HTMLInputElement).value.trim();
+          const slug = ($('f-slug') as HTMLInputElement).value.trim();
+          if (!SLUG_RE.test(slug)) throw new Error('slug 格式不对');
+          if (registry.some((r) => r.slug === slug && r.name !== name)) throw new Error('slug 已被占用');
+          await saveRegistry(
+            registry.map((r) => (r.name === name ? { ...r, slug, ...(description ? { description } : {}) } : r)),
+            `series: edit "${name}"`,
+          );
+          showToast('已保存 ✓', 'success');
+        },
+      );
+    }
+
+    if (op === 'delete') {
+      openDlg(
+        '删除合集',
+        `<p>确定删除「${name}」？</p>
+         ${
+           members.length
+             ? `<p>以下 <strong>${members.length}</strong> 篇文章会<strong class="warn">解除归卷（文章本身保留）</strong>：</p>
+                <ul>${members.map((m) => `<li>${m.name}</li>`).join('')}</ul>`
+             : '<p>该合集下暂无文章。</p>'
+         }`,
+        async () => {
+          for (const p of members) {
+            const next = p.content.replace(/^(series|seriesSlug|seriesOrder):.*$\n?/gm, '');
+            p.sha = await putFile(`${POSTS_DIR}/${p.name}`, next, `series: ungroup "${name}" (${p.name})`, p.sha);
+            p.content = next;
+            p.series = null;
+          }
+          if (reg) {
+            await saveRegistry(registry.filter((r) => r.name !== name), `series: delete "${name}"`);
+          }
+          showToast(`已删除 ✓（${members.length} 篇文章已解除归卷）`, 'success');
+        },
+        '删除',
+      );
+    }
+  });
+
+  $('btn-refresh').addEventListener('click', () => loadAll().catch((e) => showToast(e.message, 'error')));
+
+  // ---------- 凭据 ----------
+  function initAuthUI() {
+    const cfg = readCfg();
+    if (cfg.repo && cfg.token) {
+      $('cred-card').hidden = true;
+      $('app').hidden = false;
+      loadAll().catch((e) => {
+        showToast(`加载失败：${e.message}`, 'error');
+        $('cred-card').hidden = false;
+      });
+    } else {
+      $('cred-card').hidden = false;
+      ($('cfg-repo') as HTMLInputElement).value = cfg.repo || ($('cfg-repo') as HTMLInputElement).defaultValue;
+      ($('cfg-branch') as HTMLInputElement).value = cfg.branch || 'main';
+    }
+  }
+
+  $('cfg-save').addEventListener('click', () => {
+    const repo = ($('cfg-repo') as HTMLInputElement).value.trim();
+    const branch = ($('cfg-branch') as HTMLInputElement).value.trim() || 'main';
+    const token = ($('cfg-token') as HTMLInputElement).value.trim();
+    if (!repo || !token) return showToast('仓库和 Token 都要填', 'error');
+    localStorage.setItem('ed_repo', repo);
+    localStorage.setItem('ed_branch', branch);
+    localStorage.setItem('ed_token', token);
+    initAuthUI();
+  });
+
+  initAuthUI();
+</script>

@@ -3,37 +3,27 @@ import { getCollection } from 'astro:content';
 import Base from '../../layouts/Base.astro';
 import Icon from '../../components/Icon.astro';
 import PostRow from '../../components/PostRow.astro';
-import { SITE, SERIES_META } from '../../config';
-import { cnVolume } from '../../utils/posts';
+import { withBase } from '../../utils/path';
+import { getAllPosts, resolveSeries, cnVolume } from '../../utils/posts';
+
+const allPosts = await getAllPosts();
+const series = resolveSeries(allPosts);
 
 export async function getStaticPaths() {
-  const posts = await getCollection('posts', ({ data }) => !data.draft);
-  const groups = new Map<string, { slug: string; idx: number }>();
-  for (const [idx, p] of posts.entries()) {
-    if (!p.data.series) continue;
-    const slug = p.data.seriesSlug ?? encodeURIComponent(p.data.series);
-    if (!groups.has(p.data.series)) groups.set(p.data.series, { slug, idx });
-  }
-  let vol = 0;
-  return [...groups.entries()].map(([name, { slug }]) => ({
-    params: { slug },
-    props: { name, slug, volume: ++vol },
+  const posts = await getAllPosts();
+  const entries = resolveSeries(posts);
+  return entries.map((s, i) => ({
+    params: { slug: s.slug },
+    props: { name: s.name, description: s.description, volume: i + 1 },
   }));
 }
 
-const { name, slug, volume } = Astro.props;
-const all = (await getCollection('posts', ({ data }) => !data.draft))
-  .filter((p) => (p.data.seriesSlug ?? encodeURIComponent(p.data.series ?? '')) === slug)
-  .sort((a, b) => {
-    const oa = a.data.seriesOrder ?? Number.MAX_SAFE_INTEGER;
-    const ob = b.data.seriesOrder ?? Number.MAX_SAFE_INTEGER;
-    return oa !== ob ? oa - ob : a.data.date.valueOf() - b.data.date.valueOf();
-  });
-
-const desc = SERIES_META[name]?.description;
+const { name, description, volume } = Astro.props;
+const entry = series.find((s) => s.name === name);
+const all = entry?.posts ?? [];
 ---
 
-<Base title={name} description={desc ?? `${name} 合集，共 ${all.length} 篇文章。`}>
+<Base title={name} description={description ?? `${name} 合集，共 ${all.length} 篇文章。`}>
   <div class="container">
     <header class="page-head reveal">
       <div class="vol-badge" aria-hidden="true">
@@ -43,8 +33,8 @@ const desc = SERIES_META[name]?.description;
         <p class="head-kicker">合集</p>
         <h1 class="page-title">{name}</h1>
         {
-          desc && (
-            <p class="page-desc">{desc}</p>
+          description && (
+            <p class="page-desc">{description}</p>
           )
         }
         <div class="head-meta">
@@ -57,9 +47,23 @@ const desc = SERIES_META[name]?.description;
       </div>
     </header>
 
-    <div class="post-list">
-      {all.map((p, i) => <PostRow post={p} order={i + 1} showSeries={false} style={`--rd:${Math.min(i, 5) * 0.05}s`} />)}
-    </div>
+    {
+      all.length > 0 ? (
+        <div class="post-list">
+          {all.map((p, i) => (
+            <PostRow post={p} order={i + 1} showSeries={false} style={`--rd:${Math.min(i, 5) * 0.05}s`} />
+          ))}
+        </div>
+      ) : (
+        <div class="empty-state reveal">
+          <Icon name="folder" size={28} />
+          <p>这一卷已经建好，第一篇文章还在路上。</p>
+          <a class="btn" href={withBase('/posts/editor/')}>
+            <Icon name="pen" size={15} /> 去写第一篇
+          </a>
+        </div>
+      )
+    }
   </div>
 </Base>
 
@@ -143,5 +147,22 @@ const desc = SERIES_META[name]?.description;
       padding: 1rem 0.55rem;
       font-size: 0.9rem;
     }
+  }
+
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.9rem;
+    padding: 4rem 1.5rem;
+    border: 1px dashed var(--line2);
+    border-radius: var(--r-lg);
+    color: var(--ink3);
+    text-align: center;
+  }
+
+  .empty-state p {
+    margin: 0;
+    color: var(--ink2);
   }
 </style>

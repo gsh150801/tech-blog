@@ -7,7 +7,7 @@ import SeriesBox from '../../components/SeriesBox.astro';
 import Giscus from '../../components/Giscus.astro';
 import { SITE } from '../../config';
 import { withBase } from '../../utils/path';
-import { postUrl, readingTime } from '../../utils/posts';
+import { postUrl, readingTime, resolveSeries } from '../../utils/posts';
 
 export async function getStaticPaths() {
   const includeDrafts =
@@ -32,22 +32,8 @@ const idx = all.findIndex((p) => p.id === post.id);
 const prev = idx < all.length - 1 ? all[idx + 1] : null;
 const next = idx > 0 ? all[idx - 1] : null;
 
-// 合集上下文
-const seriesMap = new Map<string, { posts: typeof all; slug: string }>();
-for (const p of all) {
-  if (!p.data.series) continue;
-  const slug = p.data.seriesSlug ?? encodeURIComponent(p.data.series);
-  if (!seriesMap.has(p.data.series)) seriesMap.set(p.data.series, { posts: [], slug });
-  seriesMap.get(p.data.series)!.posts.push(p);
-}
-for (const [, v] of seriesMap) {
-  v.posts.sort((a, b) => {
-    const oa = a.data.seriesOrder ?? Number.MAX_SAFE_INTEGER;
-    const ob = b.data.seriesOrder ?? Number.MAX_SAFE_INTEGER;
-    return oa !== ob ? oa - ob : a.data.date.valueOf() - b.data.date.valueOf();
-  });
-}
-const seriesEntry = post.data.series ? seriesMap.get(post.data.series) : undefined;
+// 合集上下文（slug 优先级：注册表 > 文章 seriesSlug > 名称编码）
+const seriesEntry = (await resolveSeries(all)).find((s) => s.name === post.data.series);
 const seriesPosts = seriesEntry?.posts;
 const seriesSlug = seriesEntry?.slug ?? '';
 const editUrl = `https://github.com/${SITE.repo}/edit/main/src/content/posts/${post.id}.md`;
