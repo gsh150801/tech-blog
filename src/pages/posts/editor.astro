@@ -7,10 +7,8 @@ const today = new Date().toISOString().slice(0, 10);
 
 const seed = `---
 title: 
-description: 
 date: ${today}
 tags: []
-series: 
 draft: true
 ---
 
@@ -23,7 +21,7 @@ draft: true
 数学公式（KaTeX）：
 
 $$
-e^{i\pi} + 1 = 0
+e^{i\\pi} + 1 = 0
 $$
 
 行内公式 $a^2 + b^2 = c^2$。
@@ -1127,6 +1125,21 @@ function hello(name: string) {
     return { fm: m[1], body: text.slice(m[0].length) };
   }
 
+  /**
+   * 保存前清洗 frontmatter：把「冒号后留空」的字段整行删掉。
+   * YAML 会把空值解析成 null，而站点 schema 虽已兼容 null，
+   * 但删掉空行可以让 frontmatter 本身保持干净（也利于手读手改）。
+   */
+  function cleanFrontmatter(text: string): string {
+    const m = text.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+    if (!m) return text;
+    const cleanedFm = m[1]
+      .split('\n')
+      .filter((line) => !/^[A-Za-z_][\w-]*:\s*(#.*)?$/.test(line.trimEnd()))
+      .join('\n');
+    return `---\n${cleanedFm}\n---${text.slice(m[0].length)}`;
+  }
+
   function renderFrontmatter(fm: string): string {
     if (!fm) return '';
     const rows = fm
@@ -1357,6 +1370,13 @@ function hello(name: string) {
       openSettings();
       return;
     }
+    // title 是唯一必填字段：空着会让 CI 构建失败
+    const fmMatch = ta.value.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+    const titleVal = fmMatch?.[1].match(/^title:\s*(.+)$/m)?.[1]?.trim();
+    if (!titleVal) {
+      showToast('frontmatter 里的 title 还没填（必填）', 'error');
+      return;
+    }
     let filename = filenameEl.value.trim();
     if (!filename) {
       showToast('文件名不能为空', 'error');
@@ -1385,7 +1405,7 @@ function hello(name: string) {
         existingSha = j.sha;
       }
 
-      const b64 = btoa(unescape(encodeURIComponent(ta.value)));
+      const b64 = btoa(unescape(encodeURIComponent(cleanFrontmatter(ta.value))));
       const body: any = {
         message: existingSha ? `post: revise ${filename}` : `post: new ${filename}`,
         branch: cfg.branch,

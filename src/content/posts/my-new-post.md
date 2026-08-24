@@ -1,10 +1,8 @@
 ---
 title: 推理优化路线task2
-description: 
 date: 2026-08-25
 tags: [FlashAttention模拟]
-series: 
-draft: False
+draft: false
 ---
 
 
