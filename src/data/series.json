@@ -8,5 +8,10 @@
     "name": "写作指南",
     "slug": "writing-guide",
     "description": "本站支持的所有 Markdown 写作姿势，一篇看懂。"
+  },
+  {
+    "name": "LLM推理优化",
+    "slug": "llm-inference-opt",
+    "description": "各种关于大语言模型为何、如何做推理优化的文章"
   }
 ]
