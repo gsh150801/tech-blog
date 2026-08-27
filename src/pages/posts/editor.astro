@@ -103,6 +103,7 @@ function hello(name: string) {
           <span class="ed-tb-sep" aria-hidden="true"></span>
           <button type="button" data-act="link" title="插入链接"><Icon name="external" size={13} /></button>
           <button type="button" data-act="image" title="插入/上传图片"><Icon name="sparkle" size={13} /></button>
+          <button type="button" data-act="video" title="插入/上传视频">▶</button>
           <button type="button" data-act="table" title="插入表格"><Icon name="folder" size={13} /></button>
           <button type="button" data-act="math" title="插入 LaTeX 公式">∑</button>
           <button type="button" data-act="math-block" title="插入公式块">∫</button>
@@ -127,6 +128,7 @@ function hello(name: string) {
         >{seed}</textarea>
 
         <input id="ed-image-input" type="file" accept="image/*" hidden />
+        <input id="ed-video-input" type="file" accept="video/*" hidden />
       </section>
 
       <section class="ed-pane ed-preview" aria-label="实时预览">
@@ -733,6 +735,15 @@ function hello(name: string) {
     box-shadow: 0 4px 16px -4px rgba(0, 0, 0, 0.18);
   }
 
+  .ed-preview-body video {
+    max-width: 100%;
+    border-radius: 8px;
+    background: #000;
+    box-shadow: 0 4px 16px -4px rgba(0, 0, 0, 0.18);
+    display: block;
+    margin: 1em auto;
+  }
+
   .ed-preview-body hr {
     border: 0;
     text-align: center;
@@ -990,6 +1001,11 @@ function hello(name: string) {
 
 <script>
   // ============================================================
+  // 0) 共享客户端（GitHub API / frontmatter 清洗）
+  // ============================================================
+  import { getFile } from '../../utils/gh-client';
+
+  // ============================================================
   // 1) marked (markdown) + KaTeX (LaTeX) + DOMPurify (XSS 防护)
   //    全部走 ESM CDN，首次加载后被浏览器缓存
   // ============================================================
@@ -1058,7 +1074,11 @@ function hello(name: string) {
   const statusEl = $('ed-status');
   const shell = document.querySelector<HTMLElement>('.editor-shell')!;
   const fileInput = $<HTMLInputElement>('ed-image-input');
+  const videoInput = $<HTMLInputElement>('ed-video-input');
   const toast = $('ed-toast');
+
+  // 原始文件名：URL 带 ?file= 时进入「编辑已有文章」模式
+  const editFile = new URLSearchParams(location.search).get('file');
 
   let libs: Awaited<ReturnType<typeof loadLibs>> | null = null;
   let cacheKey = '';
@@ -1113,8 +1133,8 @@ function hello(name: string) {
     html = html.replace(/\u0000MATH(\d+)\u0000/g, (_m, idx) => placeholders[Number(idx)]);
 
     return DOMPurify.sanitize(html, {
-      ADD_TAGS: ['math', 'mtext', 'mrow', 'mi', 'mo', 'mn', 'msup', 'msub', 'mfrac', 'msqrt', 'mtable', 'mtr', 'mtd'],
-      ADD_ATTR: ['data-math', 'data-display', 'style', 'class'],
+      ADD_TAGS: ['math', 'mtext', 'mrow', 'mi', 'mo', 'mn', 'msup', 'msub', 'mfrac', 'msqrt', 'mtable', 'mtr', 'mtd', 'video', 'source'],
+      ADD_ATTR: ['data-math', 'data-display', 'style', 'class', 'controls', 'src', 'preload', 'type'],
     });
   }
 
@@ -1231,6 +1251,10 @@ function hello(name: string) {
         fileInput.click();
         return;
       }
+      case 'video': {
+        videoInput.click();
+        return;
+      }
       case 'table': {
         insertBlock(
           [
@@ -1270,59 +1294,93 @@ function hello(name: string) {
   });
 
   // ============================================================
-  // 4) 拖拽 / 选择文件 → 上传到 GitHub → 插入图片链接
+  // 4) 拖拽 / 选择文件 → 上传到 GitHub → 按类型插入（图片/视频/文件链接）
   // ============================================================
-  async function uploadImage(file: File): Promise<string> {
+  async function ghUploadBinary(file: File): Promise<string> {
     const cfg = readCfg();
     if (!cfg.token) {
       showToast('请先设置 GitHub Token（含 repo 权限）', 'error');
       openSettings();
       throw new Error('no token');
     }
-    const ext = (file.name.match(/\.([a-zA-Z0-9]+)$/)?.[1] ?? 'png').toLowerCase();
+    if (file.size > 90 * 1024 * 1024) {
+      throw new Error('文件超过 90MB（GitHub 单文件上限 100MB），请先压缩');
+    }
+    const ext = (file.name.match(/\.([a-zA-Z0-9]+)$/)?.[1] ?? 'bin').toLowerCase();
     const safeName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
     const path = `public/uploads/${safeName}`;
-    const arrayBuf = await file.arrayBuffer();
-    const b64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuf)));
-    showToast('正在上传图片…');
+
+    // 大文件不能一次性展开为参数列表，按 32KB 分块转二进制字符串
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    let bin = '';
+    const CH = 0x8000;
+    for (let i = 0; i < bytes.length; i += CH) {
+      bin += String.fromCharCode(...bytes.subarray(i, i + CH));
+    }
+    showToast(`正在上传 ${file.name}…`);
     const res = await fetch(
       `https://api.github.com/repos/${cfg.repo}/contents/${path}`,
       {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${cfg.token}`,
-          'Accept': 'application/vnd.github+json',
+          Authorization: `Bearer ${cfg.token}`,
+          Accept: 'application/vnd.github+json',
           'X-GitHub-Api-Version': '2022-11-28',
         },
-        body: JSON.stringify({
-          message: `upload: ${safeName}`,
-          branch: cfg.branch,
-          content: b64,
-        }),
+        body: JSON.stringify({ message: `upload: ${safeName}`, branch: cfg.branch, content: btoa(bin) }),
       },
     );
     if (!res.ok) {
       const txt = await res.text();
-      showToast(`上传失败：${res.status}`, 'error');
-      throw new Error(`upload failed: ${res.status} ${txt.slice(0, 120)}`);
+      throw new Error(`上传失败 HTTP ${res.status} · ${txt.slice(0, 120)}`);
     }
-    // 用 git history 上的 raw URL 形式
     return `https://raw.githubusercontent.com/${cfg.repo}/${cfg.branch}/${path}`;
   }
 
-  fileInput.addEventListener('change', async () => {
+  function insertText(text: string) {
+    const s = ta.selectionStart;
+    ta.value = ta.value.slice(0, s) + text + ta.value.slice(ta.selectionEnd);
+    ta.setSelectionRange(s + text.length, s + text.length);
+    ta.focus();
+    updatePreview();
+  }
+
+  function snippetFor(file: File, url: string): string {
+    if (file.type.startsWith('image/')) {
+      return `\n\n![${file.name.replace(/\.[^.]+$/, '')}](${url})\n\n`;
+    }
+    if (file.type.startsWith('video/')) {
+      return `\n\n<video controls preload="metadata" src="${url}"></video>\n\n`;
+    }
+    return `\n\n[${file.name}](${url})\n\n`;
+  }
+
+  async function handleFiles(files: File[]) {
+    let done = 0;
+    for (const f of files) {
+      try {
+        const url = await ghUploadBinary(f);
+        insertText(snippetFor(f, url));
+        done++;
+      } catch (e) {
+        showToast((e as Error).message, 'error');
+      }
+    }
+    if (done) showToast(`已插入 ${done} 个文件 ✓`, 'success');
+  }
+
+  fileInput.addEventListener('change', () => {
     const f = fileInput.files?.[0];
-    if (!f) return;
-    try {
-      const url = await uploadImage(f);
-      const alt = f.name.replace(/\.[^.]+$/, '');
-      wrapSelection(`![${alt}](`, `)`, url);
-      showToast('图片上传成功 ✓', 'success');
-    } catch {}
+    if (f) handleFiles([f]);
     fileInput.value = '';
   });
+  videoInput.addEventListener('change', () => {
+    const f = videoInput.files?.[0];
+    if (f) handleFiles([f]);
+    videoInput.value = '';
+  });
 
-  // 拖拽上传
+  // 拖拽：图片、视频、其他附件都支持
   let dragCount = 0;
   window.addEventListener('dragenter', (e) => {
     if (!e.dataTransfer?.types.includes('Files')) return;
@@ -1336,19 +1394,12 @@ function hello(name: string) {
   window.addEventListener('dragover', (e) => {
     if (e.dataTransfer?.types.includes('Files')) e.preventDefault();
   });
-  window.addEventListener('drop', async (e) => {
+  window.addEventListener('drop', (e) => {
     if (!e.dataTransfer?.files?.length) return;
     e.preventDefault();
     dragCount = 0;
     shell.classList.remove('drop-active');
-    const files = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith('image/'));
-    for (const f of files) {
-      try {
-        const url = await uploadImage(f);
-        wrapSelection(`![${f.name}](`, `)`, url);
-      } catch {}
-    }
-    showToast(`已上传 ${files.length} 张图片 ✓`, 'success');
+    handleFiles(Array.from(e.dataTransfer.files));
   });
 
   // ============================================================
@@ -1595,13 +1646,32 @@ function hello(name: string) {
   });
 
   // ============================================================
-  // 启动
+  // 启动：先就绪库，再按需加载已有文章（?file=xxx.md 模式）
   // ============================================================
+  if (editFile) {
+    ($('ed-save') as HTMLButtonElement).textContent = '更新到 GitHub';
+  }
+
   (async () => {
     try {
+      setStatus('idle', '初始化…');
+      if (editFile) {
+        try {
+          const { content } = await getFile(`src/content/posts/${editFile}`);
+          ta.value = content;
+          filenameEl.value = editFile;
+          cacheValue = ta.value;
+          setStatus('idle', '已加载');
+        } catch (e) {
+          showToast(`加载 ${editFile} 失败：${(e as Error).message}`, 'error');
+          cacheValue = ta.value;
+          setStatus('idle', '新文章');
+        }
+      } else {
+        cacheValue = ta.value;
+        setStatus('idle', '就绪');
+      }
       libs = await loadLibs();
-      cacheValue = ta.value;
-      setStatus('idle', '就绪');
       await updatePreview();
     } catch (e) {
       previewEl.innerHTML = `<pre style="color:#b93a1a">编辑器库加载失败：${(e as Error).message}\n请检查网络。</pre>`;

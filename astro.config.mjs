@@ -12,7 +12,10 @@ export default defineConfig({
   integrations: [
     sitemap({
       filter: (page) =>
-        !page.includes('/404') && !page.includes('/posts/editor') && !page.includes('/series/manage'),
+        !page.includes('/404') &&
+        !page.includes('/posts/editor') &&
+        !page.includes('/posts/manage') &&
+        !page.includes('/series/manage'),
     }),
   ],
   markdown: {

@@ -1,0 +1,851 @@
+---
+import Base from '../../layouts/Base.astro';
+import Icon from '../../components/Icon.astro';
+import { SITE } from '../../config';
+import { withBase } from '../../utils/path';
+---
+
+<Base
+  title="文章管理"
+  description="编辑已发布文章、管理草稿、发布/转草稿/删除、移入移出合集。"
+  noindex
+>
+  <div class="container container-narrow">
+    <header class="page-head reveal">
+      <p class="head-kicker"><Icon name="pen" size={14} /> 文章管理台</p>
+      <h1 class="page-title">我的文章</h1>
+      <p class="page-desc">
+        编辑、发布、转草稿、删除、归卷 —— 所有改动直接提交 GitHub，约 40 秒后自动上线。
+        删除操作会真正删掉文件（可在仓库 git 历史找回）。
+      </p>
+      <div class="head-links">
+        <a class="back-link u-link" href={withBase('/posts/')}>← 文章列表</a>
+        <a class="back-link u-link" href={withBase('/series/manage/')}>合集管理</a>
+        <a class="back-link u-link" href={withBase('/posts/editor/')}>新建文章</a>
+      </div>
+    </header>
+
+    <!-- 凭据卡片 -->
+    <section class="card cred-card reveal" id="cred-card" hidden>
+      <h2 class="card-title"><Icon name="external" size={15} /> GitHub 凭据</h2>
+      <p class="card-desc">
+        与在线编辑器共用同一套凭据（只存本机浏览器）。需要一个有 <code>repo</code> 权限的
+        <a href="https://github.com/settings/tokens?type=beta" target="_blank" rel="noopener noreferrer">Personal Access Token</a>。
+      </p>
+      <div class="field-row">
+        <label class="field">
+          <span>仓库</span>
+          <input id="cfg-repo" type="text" value={SITE.repo} spellcheck="false" />
+        </label>
+        <label class="field field-narrow">
+          <span>分支</span>
+          <input id="cfg-branch" type="text" value="main" spellcheck="false" />
+        </label>
+      </div>
+      <label class="field">
+        <span>Token</span>
+        <input id="cfg-token" type="password" placeholder="ghp_…" autocomplete="off" />
+      </label>
+      <div class="card-actions">
+        <button class="btn btn-primary" id="cfg-save" type="button">保存并加载</button>
+      </div>
+    </section>
+
+    <div id="app" data-editor-url={withBase('/posts/editor/')} hidden>
+      <!-- 工具条：搜索 + 过滤 + 新建 -->
+      <section class="toolbar reveal">
+        <input id="q" type="search" placeholder="按标题或文件名筛选…" />
+        <div class="tabs" role="tablist">
+          <button type="button" class="tab active" data-filter="all">全部 <em id="c-all"></em></button>
+          <button type="button" class="tab" data-filter="pub">已发布 <em id="c-pub"></em></button>
+          <button type="button" class="tab" data-filter="draft">草稿 <em id="c-draft"></em></button>
+        </div>
+      </section>
+
+      <section id="post-list" class="post-list reveal"></section>
+    </div>
+
+    <!-- 操作弹窗 -->
+    <dialog id="dlg" class="dlg">
+      <div class="dlg-box">
+        <header class="dlg-head">
+          <h2 id="dlg-title">操作</h2>
+          <button class="icon-btn" id="dlg-x" type="button" aria-label="关闭">
+            <Icon name="close" size={16} />
+          </button>
+        </header>
+        <div id="dlg-body" class="dlg-body"></div>
+        <div class="dlg-actions">
+          <button class="btn" id="dlg-cancel" type="button">取消</button>
+          <button class="btn btn-danger hidden" id="dlg-danger" type="button">删除</button>
+          <button class="btn btn-primary" id="dlg-ok" type="button">确认</button>
+        </div>
+      </div>
+    </dialog>
+
+    <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+  </div>
+</Base>
+
+<style>
+  .container-narrow {
+    max-width: 56rem;
+    padding-bottom: 3rem;
+  }
+
+  .page-head {
+    padding: 3rem 0 1.6rem;
+  }
+
+  .head-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4em;
+    margin: 0;
+    font-size: 0.78rem;
+    letter-spacing: 0.3em;
+    color: var(--ink3);
+    font-weight: 600;
+  }
+
+  .page-title {
+    font-size: clamp(1.8rem, 4.5vw, 2.4rem);
+    margin: 0.5rem 0 0;
+  }
+
+  .page-desc {
+    margin: 0.7rem 0 0;
+    color: var(--ink2);
+    max-width: 42rem;
+    line-height: 1.85;
+  }
+
+  .head-links {
+    display: flex;
+    gap: 1.4rem;
+    margin-top: 1rem;
+  }
+
+  .back-link {
+    font-size: 0.85rem;
+    color: var(--ink2);
+  }
+
+  /* 卡片 */
+  .card {
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    background: var(--bg1);
+    padding: 1.4rem 1.6rem;
+    margin-bottom: 1.2rem;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .card-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.1rem;
+    margin: 0 0 0.6rem;
+  }
+
+  .card-desc {
+    margin: 0 0 1rem;
+    font-size: 0.88rem;
+    color: var(--ink2);
+    line-height: 1.75;
+  }
+
+  .card-desc code,
+  .hint code {
+    font-family: var(--font-mono);
+    font-size: 0.88em;
+    background: var(--wash);
+    padding: 0.05em 0.4em;
+    border-radius: 4px;
+  }
+
+  .card-desc a {
+    color: var(--accent-ink);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .field-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.9rem;
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    margin-bottom: 0.9rem;
+    font-size: 0.8rem;
+    color: var(--ink2);
+  }
+
+  .field-narrow {
+    max-width: 9rem;
+  }
+
+  .field input,
+  .field select {
+    background: var(--bg0);
+    border: 1px solid var(--line);
+    color: var(--ink);
+    padding: 0.55rem 0.75rem;
+    border-radius: var(--r-sm);
+    font: inherit;
+    font-size: 0.92rem;
+    transition: border-color 0.2s;
+  }
+
+  .field input:focus,
+  .field select:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  .card-actions {
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  /* 工具条 */
+  .toolbar {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.1rem;
+  }
+
+  #q {
+    flex: 1;
+    min-width: 12rem;
+    padding: 0.55rem 0.9rem;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--bg1);
+    color: var(--ink);
+    font: inherit;
+    font-size: 0.9rem;
+  }
+
+  #q:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  .tabs {
+    display: inline-flex;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    overflow: hidden;
+    background: var(--bg1);
+  }
+
+  .tab {
+    padding: 0.5rem 1.05rem;
+    font-size: 0.85rem;
+    color: var(--ink2);
+    transition: background-color 0.15s, color 0.15s;
+  }
+
+  .tab em {
+    font-style: normal;
+    opacity: 0.7;
+    font-size: 0.82em;
+  }
+
+  .tab.active {
+    background: var(--ink);
+    color: var(--bg1);
+  }
+
+  /* 文章行 */
+  .post-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+  }
+
+  .p-row {
+    padding: 1.05rem 1.25rem;
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    background: var(--bg1);
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+  }
+
+  .p-row.busy {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  .p-head {
+    display: flex;
+    align-items: baseline;
+    gap: 0.8rem;
+    flex-wrap: wrap;
+  }
+
+  .p-title {
+    font-family: var(--font-display);
+    font-weight: 640;
+    font-size: 1.04rem;
+  }
+
+  .badge {
+    flex: none;
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    padding: 0.14em 0.75em;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+
+  .badge.pub {
+    color: var(--teal);
+    border: 1px solid color-mix(in srgb, var(--teal) 45%, transparent);
+    background: color-mix(in srgb, var(--teal) 7%, transparent);
+  }
+
+  .badge.draft {
+    color: var(--gold);
+    border: 1px dashed color-mix(in srgb, var(--gold) 50%, transparent);
+    background: color-mix(in srgb, var(--gold) 6%, transparent);
+  }
+
+  .p-file {
+    font-family: var(--font-mono);
+    font-size: 0.74rem;
+    color: var(--ink3);
+  }
+
+  .p-meta {
+    font-size: 0.76rem;
+    color: var(--ink3);
+  }
+
+  .p-series-chip {
+    font-size: 0.74rem;
+    color: var(--accent-ink);
+    border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+    border-radius: 999px;
+    padding: 0.1em 0.7em;
+  }
+
+  .p-foot {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+  }
+
+  .move-box {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+
+  .move-box select {
+    max-width: 11rem;
+    padding: 0.32rem 0.5rem;
+    border: 1px solid var(--line);
+    border-radius: var(--r-sm);
+    background: var(--bg0);
+    color: var(--ink);
+    font-size: 0.8rem;
+  }
+
+  .op-btn {
+    padding: 0.38em 0.9em;
+    font-size: 0.8rem;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    color: var(--ink2);
+    background: var(--bg0);
+    transition: border-color 0.2s, color 0.2s, background-color 0.2s;
+  }
+
+  .op-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent-ink);
+    background: var(--wash);
+  }
+
+  .op-btn.danger:hover {
+    border-color: #c0392b;
+    color: #c0392b;
+    background: color-mix(in srgb, #c0392b 8%, transparent);
+  }
+
+  .empty-tip {
+    text-align: center;
+    color: var(--ink3);
+    padding: 2.5rem 0;
+    font-size: 0.92rem;
+  }
+
+  /* 弹窗 */
+  .dlg::backdrop {
+    background: rgb(20 14 6 / 55%);
+    backdrop-filter: blur(6px);
+  }
+
+  .dlg-box {
+    width: min(30rem, calc(100% - 2rem));
+    background: var(--bg1);
+    border: 1px solid var(--line2);
+    border-radius: var(--r-lg);
+    padding: 1.4rem 1.5rem 1.2rem;
+    box-shadow: var(--shadow-lg);
+  }
+
+  .dlg-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.8rem;
+  }
+
+  .dlg-head h2 {
+    font-size: 1.12rem;
+    margin: 0;
+  }
+
+  .dlg-body {
+    font-size: 0.92rem;
+    color: var(--ink2);
+    line-height: 1.75;
+  }
+
+  .dlg-body .warn {
+    color: #c0392b;
+    font-size: 0.84rem;
+  }
+
+  .dlg-body ul {
+    margin: 0.5rem 0;
+    padding-left: 1.2em;
+    font-size: 0.86rem;
+  }
+
+  .dlg-body .field {
+    margin-top: 0.7rem;
+  }
+
+  .dlg-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.6rem;
+    margin-top: 1.2rem;
+  }
+
+  .btn-danger {
+    background: #c0392b;
+    border-color: #c0392b;
+    color: #fff6e8;
+  }
+
+  .hidden {
+    display: none !important;
+  }
+
+  .toast {
+    position: fixed;
+    bottom: 1.4rem;
+    left: 50%;
+    transform: translateX(-50%) translateY(16px);
+    background: var(--bg1);
+    color: var(--ink);
+    border: 1px solid var(--line2);
+    padding: 0.7rem 1.3rem;
+    border-radius: 999px;
+    font-size: 0.88rem;
+    box-shadow: var(--shadow-md);
+    z-index: 60;
+    opacity: 0;
+    transition: opacity 0.25s, transform 0.25s var(--ease-spring);
+  }
+
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  .toast.success { border-color: var(--teal); }
+  .toast.error { border-color: var(--accent); color: var(--accent-ink); }
+
+  @media (max-width: 640px) {
+    .field-row {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<script>
+  import {
+    readCfg,
+    saveCfg,
+    gh,
+    getFile,
+    putFile,
+    deleteFile,
+    splitFrontmatter,
+    getFmValue,
+    setFmKey,
+    removeFmKeys,
+    cleanFrontmatter,
+  } from '../../utils/gh-client';
+
+  const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
+  const POSTS_DIR = 'src/content/posts';
+
+  const toast = $('toast');
+  let toastTimer: ReturnType<typeof setTimeout>;
+  function showToast(msg: string, kind: 'success' | 'error' | 'info' = 'info') {
+    toast.textContent = msg;
+    toast.className = 'toast show ' + (kind === 'info' ? '' : kind);
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => (toast.className = 'toast'), 3200);
+  }
+
+  // ---------- 数据 ----------
+  interface PostFile {
+    file: string;       // my-post.md
+    sha: string;
+    content: string;
+    title: string;
+    date: number;       // epoch ms
+    draft: boolean;
+    series: string | null;
+  }
+  interface SeriesItem { name: string; slug: string; description?: string }
+  let posts: PostFile[] = [];
+  let registry: SeriesItem[] = [];
+  let filterMode: 'all' | 'pub' | 'draft' = 'all';
+
+  function parsePost(file: string, sha: string, content: string): PostFile {
+    const { fm } = splitFrontmatter(content);
+    const dateStr = getFmValue(content, 'date');
+    const d = dateStr ? new Date(dateStr) : new Date(0);
+    return {
+      file,
+      sha,
+      content,
+      title: getFmValue(content, 'title') ?? file.replace(/\.md$/, ''),
+      date: isNaN(d.valueOf()) ? 0 : d.valueOf(),
+      draft: /^(true|True|TRUE)$/.test(getFmValue(content, 'draft') ?? ''),
+      series: getFmValue(content, 'series'),
+    };
+  }
+
+  async function loadAll() {
+    showToast('正在加载…');
+    const cfg = readCfg();
+    const [dirRes, regRes] = await Promise.all([
+      gh<any[]>(`/repos/${cfg.repo}/contents/${POSTS_DIR}?ref=${cfg.branch}`),
+      gh<any>(`/repos/${cfg.repo}/contents/src/data/series.json?ref=${cfg.branch}`).catch(() => null),
+    ]);
+    if (regRes) {
+      try { registry = JSON.parse(atob(regRes.content.replace(/\n/g, ''))); } catch { registry = []; }
+    }
+    const files = dirRes.filter((f) => f.name.endsWith('.md') && f.type === 'file');
+    const details = await Promise.all(
+      files.map((f) =>
+        getFile(`${POSTS_DIR}/${f.name}`).then((r) => parsePost(f.name, r.sha, r.content)),
+      ),
+    );
+    posts = details.sort((a, b) => b.date - a.date);
+    render();
+    showToast(`已加载 ${posts.length} 篇文章`, 'success');
+  }
+
+  // ---------- 渲染 ----------
+  function visiblePosts(): PostFile[] {
+    const q = ($('q') as HTMLInputElement).value.trim().toLowerCase();
+    return posts.filter((p) => {
+      if (filterMode === 'pub' && p.draft) return false;
+      if (filterMode === 'draft' && !p.draft) return false;
+      if (!q) return true;
+      return p.title.toLowerCase().includes(q) || p.file.toLowerCase().includes(q);
+    });
+  }
+
+  function render() {
+    const listEl = $('post-list');
+    $('c-all').textContent = String(posts.length);
+    $('c-pub').textContent = String(posts.filter((p) => !p.draft).length);
+    $('c-draft').textContent = String(posts.filter((p) => p.draft).length);
+
+    const list = visiblePosts();
+    listEl.innerHTML = '';
+    if (!list.length) {
+      listEl.innerHTML = '<div class="empty-tip">没有匹配的文章。</div>';
+      return;
+    }
+
+    for (const p of list) {
+      const row = document.createElement('article');
+      row.className = 'p-row';
+      row.dataset.file = p.file;
+      const dateTxt = p.date
+        ? new Date(p.date).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' })
+        : '(无日期)';
+      const options = registry
+        .map((r) => `<option value="${r.name.replace(/"/g, '&quot;')}">${r.name}</option>`)
+        .join('');
+      row.innerHTML = `
+        <div class="p-head">
+          <span class="p-title"></span>
+          <span class="badge ${p.draft ? 'draft' : 'pub'}">${p.draft ? '草稿' : '已发布'}</span>
+          ${p.series ? '<span class="p-series-chip"></span>' : ''}
+          <span class="p-meta">${dateTxt}</span>
+          <code class="p-file">${p.file}</code>
+        </div>
+        <div class="p-foot">
+          <button class="op-btn" data-op="edit" type="button">编辑</button>
+          <button class="op-btn" data-op="toggle" type="button">${p.draft ? '发布' : '转为草稿'}</button>
+          ${
+            p.series
+              ? `<button class="op-btn" data-op="unassign" type="button">移出合集</button>`
+              : `<span class="move-box"><select data-role="series-select"><option value="">选择合集…</option>${options}</select>
+                 <button class="op-btn" data-op="assign" type="button">移入</button></span>`
+          }
+          <button class="op-btn" data-op="rename" type="button">改名</button>
+          <button class="op-btn danger" data-op="delete" type="button">删除</button>
+        </div>`;
+      (row.querySelector('.p-title') as HTMLElement).textContent = p.title;
+      if (p.series) (row.querySelector('.p-series-chip') as HTMLElement).textContent = `📁 ${p.series}`;
+      listEl.appendChild(row);
+    }
+  }
+
+  // ---------- 弹窗 ----------
+  const dlg = $('dlg') as HTMLDialogElement;
+  let onOk: (() => Promise<void>) | null = null;
+  let onDanger: (() => Promise<void>) | null = null;
+
+  function openDlg(opts: {
+    title: string;
+    bodyHTML: string;
+    okText?: string;
+    dangerText?: string;
+    onOk?: () => Promise<void>;
+    onDanger?: () => Promise<void>;
+  }) {
+    $('dlg-title').textContent = opts.title;
+    $('dlg-body').innerHTML = opts.bodyHTML;
+    $('dlg-ok').textContent = opts.okText ?? '确认';
+    const dbtn = $('dlg-danger');
+    if (opts.dangerText) {
+      dbtn.classList.remove('hidden');
+      dbtn.textContent = opts.dangerText;
+    } else dbtn.classList.add('hidden');
+    onOk = opts.onOk ?? null;
+    onDanger = opts.onDanger ?? null;
+    dlg.showModal();
+  }
+
+  $('dlg-x').addEventListener('click', () => dlg.close());
+  $('dlg-cancel').addEventListener('click', () => dlg.close());
+  async function runAction(fn: () => Promise<void>) {
+    try {
+      await fn();
+      dlg.close();
+      render();
+    } catch (e) {
+      showToast(`失败：${(e as Error).message}`, 'error');
+    }
+  }
+  $('dlg-ok').addEventListener('click', () => onOk && runAction(onOk));
+  $('dlg-danger').addEventListener('click', () => onDanger && runAction(onDanger));
+
+  // ---------- 操作 ----------
+  async function withBusy(file: string, fn: () => Promise<void>) {
+    const row = document.querySelector<HTMLElement>(`.p-row[data-file="${CSS.escape(file)}"]`);
+    row?.classList.add('busy');
+    try {
+      await fn();
+      render();
+    } catch (e) {
+      showToast(`失败：${(e as Error).message}`, 'error');
+      row?.classList.remove('busy');
+    }
+  }
+
+  $('post-list').addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-op]');
+    if (!btn) return;
+    const row = btn.closest('.p-row') as HTMLElement;
+    const file = row.dataset.file!;
+    const post = posts.find((p) => p.file === file)!;
+    const op = btn.dataset.op;
+
+    // 编辑 → 跳到在线编辑器
+    if (op === 'edit') {
+      const editorUrl = document.getElementById('app')!.dataset.editorUrl!;
+      location.href = `${editorUrl}?file=${encodeURIComponent(file)}`;
+      return;
+    }
+
+    // 发布 / 转草稿
+    if (op === 'toggle') {
+      const nextVal = post.draft ? 'false' : 'true';
+      const verb = post.draft ? '发布' : '转回草稿';
+      openDlg({
+        title: `${verb}「${post.title}」`,
+        bodyHTML: `<p>${
+          post.draft
+            ? '发布后文章立即公开（进入列表、搜索与 RSS）。'
+            : '转为草稿后，下次部署起将从公开站点隐藏，文件保留。'
+        }</p><p class="warn">提交后约 40 秒生效。</p>`,
+        okText: verb,
+        onOk: async () =>
+          withBusy(file, async () => {
+            const next = setFmKey(post.content, 'draft', nextVal);
+            post.sha = await putFile(
+              `${POSTS_DIR}/${file}`,
+              next,
+              `post: ${post.draft ? 'publish' : 'unpublish'} "${file}"`,
+              post.sha,
+            );
+            post.content = next;
+            post.draft = !post.draft;
+            showToast(`${verb} ✓`, 'success');
+          }),
+      });
+      return;
+    }
+
+    // 移入合集
+    if (op === 'assign') {
+      const sel = row.querySelector<HTMLSelectElement>('select[data-role="series-select"]');
+      const name = sel?.value;
+      if (!name) return showToast('先在左侧选择一个合集', 'error');
+      withBusy(file, async () => {
+        let next = removeFmKeys(post.content, ['seriesSlug', 'seriesOrder']);
+        next = setFmKey(cleanFrontmatter(next), 'series', JSON.stringify(name));
+        post.sha = await putFile(
+          `${POSTS_DIR}/${file}`,
+          next,
+          `series: assign "${file}" → "${name}"`,
+          post.sha,
+        );
+        post.content = next;
+        post.series = name;
+        showToast(`已移入「${name}」✓`, 'success');
+      });
+      return;
+    }
+
+    // 移出合集
+    if (op === 'unassign') {
+      openDlg({
+        title: '移出合集',
+        bodyHTML: `<p>把「${post.title}」从合集「${post.series}」中移出？</p><p>文章本身不受影响，只是不再属于任何合集。</p>`,
+        okText: '移出',
+        onOk: () =>
+          withBusy(file, async () => {
+            const next = removeFmKeys(post.content, ['series', 'seriesSlug', 'seriesOrder']);
+            post.sha = await putFile(`${POSTS_DIR}/${file}`, next, `series: ungroup "${file}"`, post.sha);
+            post.content = next;
+            post.series = null;
+            showToast('已移出合集 ✓', 'success');
+          }),
+      });
+      return;
+    }
+
+    // 改名
+    if (op === 'rename') {
+      openDlg({
+        title: '重命名文件',
+        bodyHTML:
+          `<p>将 <code>${file}</code> 重命名为：</p>` +
+          `<label class="field"><span>新文件名</span><input id="f-name" type="text" value="${file}" spellcheck="false" /></label>` +
+          '<p class="warn">文章网址会改变；GitHub 会以「新文件 + 删除旧文件」两个提交完成。</p>',
+        okText: '重命名',
+        onOk: () =>
+          withBusy(file, async () => {
+            const nf = (($('f-name') as HTMLInputElement).value || '').trim();
+            if (!nf.endsWith('.md')) throw new Error('必须以 .md 结尾');
+            if (!/^[\w.-]+\.md$/.test(nf)) throw new Error('只允许字母数字-_和点');
+            if (nf === file) throw new Error('名字没变');
+            if (posts.some((p) => p.file === nf)) throw new Error('已有同名文件');
+            await putFile(`${POSTS_DIR}/${nf}`, post.content, `post: rename ${file} → ${nf}`, undefined);
+            await deleteFile(`${POSTS_DIR}/${file}`, post.sha, `post: remove old ${file}`);
+            post.file = nf;
+            post.sha = (await getFile(`${POSTS_DIR}/${nf}`)).sha;
+            showToast('已重命名 ✓（注意更新旧链接）', 'success');
+          }),
+      });
+      return;
+    }
+
+    // 删除
+    if (op === 'delete') {
+      openDlg({
+        title: '删除文章',
+        bodyHTML:
+          `<p>确定<strong class="warn">永久删除</strong>「${post.title}」（${file}）？</p>` +
+          `<ul><li>部署完成后将从列表、搜索、RSS 中消失</li>` +
+          `<li>内容可以从仓库的 git 历史找回，但页面不再存在</li>` +
+          (post.series ? `<li>同时从合集「${post.series}」移除</li>` : '') + '</ul>',
+        okText: '取消',
+        dangerText: '永久删除',
+        onOk: () => Promise.resolve(),
+        onDanger: () =>
+          withBusy(file, async () => {
+            await deleteFile(`${POSTS_DIR}/${file}`, post.sha, `post: delete "${file}"`);
+            posts = posts.filter((x) => x.file !== file);
+            showToast('已删除 ✓', 'success');
+          }),
+      });
+    }
+  });
+
+  // ---------- 工具条 ----------
+  $('q').addEventListener('input', render);
+  document.querySelectorAll('.tab').forEach((t) =>
+    t.addEventListener('click', () => {
+      filterMode = t.dataset.filter as any;
+      document.querySelectorAll('.tab').forEach((x) => x.classList.toggle('active', x === t));
+      render();
+    }),
+  );
+
+  // ---------- 凭据 ----------
+  function initAuthUI() {
+    const cfg = readCfg();
+    if (cfg.repo && cfg.token) {
+      $('cred-card').hidden = true;
+      $('app').hidden = false;
+      loadAll().catch((e) => {
+        showToast(`加载失败：${e.message}`, 'error');
+        $('cred-card').hidden = false;
+      });
+    } else {
+      $('cred-card').hidden = false;
+      ($('cfg-repo') as HTMLInputElement).value = cfg.repo || ($('cfg-repo') as HTMLInputElement).defaultValue;
+      ($('cfg-branch') as HTMLInputElement).value = cfg.branch || 'main';
+    }
+  }
+
+  $('cfg-save').addEventListener('click', () => {
+    const repo = ($('cfg-repo') as HTMLInputElement).value.trim();
+    const branch = ($('cfg-branch') as HTMLInputElement).value.trim() || 'main';
+    const token = ($('cfg-token') as HTMLInputElement).value.trim();
+    if (!repo || !token) return showToast('仓库和 Token 都要填', 'error');
+    saveCfg({ repo, branch, token });
+    initAuthUI();
+  });
+
+  initAuthUI();
+</script>

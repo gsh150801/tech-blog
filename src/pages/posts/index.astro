@@ -2,6 +2,7 @@
 import Base from '../../layouts/Base.astro';
 import PostRow from '../../components/PostRow.astro';
 import Icon from '../../components/Icon.astro';
+import { withBase } from '../../utils/path';
 import { getAllPosts, getDrafts, postUrl, formatDate } from '../../utils/posts';
 
 const posts = await getAllPosts();
@@ -25,6 +26,17 @@ const years = [...byYear.keys()].sort((a, b) => b - a);
         共 {posts.length} 篇 · 始于 {years[years.length - 1] ?? new Date().getFullYear()} 年
       </p>
     </header>
+
+    <div class="manage-row reveal">
+      <a class="manage-link" href={withBase('/posts/manage/')}>
+        <Icon name="pen" size={14} />
+        管理文章（编辑 / 发布 / 草稿 / 归卷）
+      </a>
+      <a class="manage-link" href={withBase('/series/manage/')}>
+        <Icon name="folder" size={14} />
+        管理合集
+      </a>
+    </div>
 
     {
       years.map((y) => (
@@ -128,6 +140,31 @@ const years = [...byYear.keys()].sort((a, b) => b - a);
     flex: 1;
     height: 1px;
     background: linear-gradient(90deg, var(--line2), transparent);
+  }
+
+  .manage-row {
+    display: flex;
+    gap: 0.8rem;
+    flex-wrap: wrap;
+    margin: -1rem 0 2rem;
+  }
+
+  .manage-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4em;
+    font-size: 0.85rem;
+    color: var(--ink2);
+    padding: 0.4em 1em;
+    border: 1px dashed var(--line2);
+    border-radius: 999px;
+    transition: color 0.2s, border-color 0.2s, background-color 0.2s;
+  }
+
+  .manage-link:hover {
+    color: var(--accent-ink);
+    border-color: var(--accent);
+    background: var(--wash);
   }
 
   /* 草稿区（仅含 INCLUDE_DRAFTS=1 的构建里出现） */

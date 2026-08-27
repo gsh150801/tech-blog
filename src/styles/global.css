@@ -512,6 +512,15 @@ html.theme-ripple::view-transition-new(root) {
   box-shadow: var(--shadow-md);
 }
 
+.prose video {
+  display: block;
+  max-width: 100%;
+  margin-inline: auto;
+  border-radius: var(--r-md);
+  background: #000;
+  box-shadow: var(--shadow-md);
+}
+
 .prose hr {
   border: 0;
   margin-block: 2.8em;

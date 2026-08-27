@@ -441,8 +441,13 @@ import { withBase } from '../../utils/path';
 </style>
 
 <script>
+  import { readCfg, gh, b64d, putFile } from '../../utils/gh-client';
+
   // ============================================================
   // 合集管理台：注册表(src/data/series.json) + 成员文章 的在线 CRUD
+  // 所有操作采用乐观更新：本地状态即时刷新，不再回拉
+  // （GitHub Contents API 在 PUT 后有缓存，紧跟的 GET 会拿到旧数据，
+  //   这正是之前「添加合集没反应」的原因。需要最新远端时点「刷新」。）
   // 凭据与编辑器共用（localStorage: ed_repo / ed_branch / ed_token）
   // ============================================================
   const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -457,37 +462,6 @@ import { withBase } from '../../utils/path';
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => (toast.className = 'toast'), 3000);
   }
-
-  interface Cfg { repo: string; branch: string; token: string }
-  function readCfg(): Cfg {
-    return {
-      repo: localStorage.getItem('ed_repo') || '',
-      branch: localStorage.getItem('ed_branch') || 'main',
-      token: localStorage.getItem('ed_token') || '',
-    };
-  }
-
-  async function gh(path: string, init?: RequestInit): Promise<any> {
-    const cfg = readCfg();
-    const res = await fetch(`https://api.github.com${path}`, {
-      ...init,
-      headers: {
-        Authorization: `Bearer ${cfg.token}`,
-        Accept: 'application/vnd.github+json',
-        'X-GitHub-Api-Version': '2022-11-28',
-        ...(init?.body ? { 'Content-Type': 'application/json' } : {}),
-        ...(init?.headers ?? {}),
-      },
-    });
-    if (!res.ok) {
-      const t = await res.text();
-      throw new Error(`HTTP ${res.status} · ${t.slice(0, 120)}`);
-    }
-    return res.status === 204 ? null : res.json();
-  }
-
-  const b64e = (s: string) => btoa(unescape(encodeURIComponent(s)));
-  const b64d = (s: string) => decodeURIComponent(escape(atob(s.replace(/\n/g, ''))));
 
   // ---------- 状态 ----------
   interface RegistryItem { name: string; slug: string; description?: string }
@@ -528,14 +502,6 @@ import { withBase } from '../../utils/path';
     }));
     render();
     showToast(`已加载 ${registry.length} 个合集 · ${postFiles.length} 篇文章`, 'success');
-  }
-
-  async function putFile(path: string, text: string, message: string, sha?: string) {
-    const cfg = readCfg();
-    const body: any = { message, branch: cfg.branch, content: b64e(text) };
-    if (sha) body.sha = sha;
-    const res = await gh(`/repos/${cfg.repo}/contents/${path}`, { method: 'PUT', body: JSON.stringify(body) });
-    return res.content.sha as string;
   }
 
   async function saveRegistry(next: RegistryItem[], message: string) {
@@ -605,8 +571,8 @@ import { withBase } from '../../utils/path';
     ok.textContent = '提交中…';
     try {
       await dlgAction();
+      render();
       dlg.close();
-      await loadAll();
     } catch (e) {
       showToast(`失败：${(e as Error).message}`, 'error');
     } finally {
@@ -641,7 +607,7 @@ import { withBase } from '../../utils/path';
       await saveRegistry(next, `series: create "${name}"`);
       showToast('合集已创建 ✓ 部署约 40 秒后生效', 'success');
       $('new-name').value = ''; $('new-slug').value = ''; $('new-desc').value = '';
-      await loadAll();
+      render();
     } catch (e) {
       showToast(`创建失败：${(e as Error).message}`, 'error');
     } finally {
