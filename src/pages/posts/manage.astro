@@ -60,6 +60,7 @@ import { withBase } from '../../utils/path';
           <button type="button" class="tab" data-filter="pub">已发布 <em id="c-pub"></em></button>
           <button type="button" class="tab" data-filter="draft">草稿 <em id="c-draft"></em></button>
         </div>
+        <button class="op-btn" id="btn-refresh" type="button">刷新</button>
       </section>
 
       <section id="post-list" class="post-list reveal"></section>
@@ -494,6 +495,7 @@ import { withBase } from '../../utils/path';
     readCfg,
     saveCfg,
     gh,
+    b64d,
     getFile,
     putFile,
     deleteFile,
@@ -549,14 +551,26 @@ import { withBase } from '../../utils/path';
   async function loadAll() {
     showToast('正在加载…');
     const cfg = readCfg();
-    const [dirRes, regRes] = await Promise.all([
-      gh<any[]>(`/repos/${cfg.repo}/contents/${POSTS_DIR}?ref=${cfg.branch}`),
-      gh<any>(`/repos/${cfg.repo}/contents/src/data/series.json?ref=${cfg.branch}`).catch(() => null),
-    ]);
-    if (regRes) {
-      try { registry = JSON.parse(atob(regRes.content.replace(/\n/g, ''))); } catch { registry = []; }
+    // 注册表较小但关键（移入合集的下拉数据源）：失败重试两次
+    let regRes: any = null;
+    const dirPromise = gh<any[]>(`/repos/${cfg.repo}/contents/${POSTS_DIR}?ref=${cfg.branch}`);
+    const regPromise = gh<any>(`/repos/${cfg.repo}/contents/src/data/series.json?ref=${cfg.branch}`).catch(() => null);
+    const [dirRes, regFirst] = await Promise.all([dirPromise, regPromise]);
+    regRes = regFirst;
+    if (!regRes) {
+      showToast('合集列表加载不稳，正在重试…');
+      for (let i = 0; i < 2 && !regRes; i++) {
+        try {
+          regRes = await gh<any>(`/repos/${cfg.repo}/contents/src/data/series.json?ref=${cfg.branch}`);
+        } catch {
+          await new Promise((r) => setTimeout(r, 1500));
+        }
+      }
     }
-    const files = dirRes.filter((f) => f.name.endsWith('.md') && f.type === 'file');
+    if (regRes) {
+      try { registry = JSON.parse(b64d(regRes.content)); } catch { registry = []; }
+    }
+    const files = (dirRes as any[]).filter((f) => f.name.endsWith('.md') && f.type === 'file');
     const details = await Promise.all(
       files.map((f) =>
         getFile(`${POSTS_DIR}/${f.name}`).then((r) => parsePost(f.name, r.sha, r.content)),
@@ -564,7 +578,12 @@ import { withBase } from '../../utils/path';
     );
     posts = details.sort((a, b) => b.date - a.date);
     render();
-    showToast(`已加载 ${posts.length} 篇文章`, 'success');
+    showToast(
+      registry.length
+        ? `已加载 ${posts.length} 篇文章 · ${registry.length} 个合集`
+        : `已加载 ${posts.length} 篇文章 · ⚠️ 合集列表获取失败，点「刷新」重试`,
+      registry.length ? 'success' : 'error',
+    );
   }
 
   // ---------- 渲染 ----------
@@ -813,6 +832,7 @@ import { withBase } from '../../utils/path';
 
   // ---------- 工具条 ----------
   $('q').addEventListener('input', render);
+  $('btn-refresh').addEventListener('click', () => loadAll().catch((e) => showToast(e.message, 'error')));
   document.querySelectorAll('.tab').forEach((t) =>
     t.addEventListener('click', () => {
       filterMode = t.dataset.filter as any;
