@@ -13,9 +13,5 @@
     "name": "LLM推理优化",
     "slug": "llm-inference-opt",
     "description": "各种关于大语言模型为何、如何做推理优化的文章"
-  },
-  {
-    "name": "QA秒建合集",
-    "slug": "qa-instant"
   }
 ]
