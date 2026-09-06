@@ -3,8 +3,8 @@ title: KV Cache 与推理服务内存管理
 date: 2026-08-30
 tags: [kv cache, 推理服务内存管理]
 draft: false
----
-# page attention｜vllm分页注意力
+series: "LLM推理优化"
+---# page attention｜vllm分页注意力
 ## 在线推理场景下的问题
 在线推理服务里，请求不会整齐地一起开始、一起结束：**有的 prompt 很短，有的上下文很长，有的很快生成完，有的还在继续 decode**。如果仍然按最大长度给每个请求预留整块 KV Cache，显存会被大量浪费，GPU 也会因为静态 batch 里的空洞而等待。
 ## vllm给出的解决思路/方法
