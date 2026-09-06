@@ -37,6 +37,7 @@ const seriesEntry = (await resolveSeries(all)).find((s) => s.name === post.data.
 const seriesPosts = seriesEntry?.posts;
 const seriesSlug = seriesEntry?.slug ?? '';
 const editUrl = `https://github.com/${SITE.repo}/edit/main/src/content/posts/${post.id}.md`;
+const editorUrl = `${withBase('/posts/editor/')}?file=${encodeURIComponent(`${post.id}.md`)}`;
 ---
 
 <Base
@@ -94,10 +95,16 @@ const editUrl = `https://github.com/${SITE.repo}/edit/main/src/content/posts/${p
             <span class="pm-item">
               <Icon name="clock" size={14} /> 约 {reading} 分钟
             </span>
-            <button class="pm-share" data-share type="button">
-              <Icon name="share" size={14} />
-              <span class="share-label">分享</span>
-            </button>
+            <span class="pm-actions">
+              <a class="pm-btn" href={editorUrl} title="在在线编辑器中打开并修改本文">
+                <Icon name="pen" size={14} />
+                编辑
+              </a>
+              <button class="pm-btn" data-share type="button">
+                <Icon name="share" size={14} />
+                <span class="share-label">分享</span>
+              </button>
+            </span>
           </div>
         </header>
 
@@ -153,9 +160,15 @@ const editUrl = `https://github.com/${SITE.repo}/edit/main/src/content/posts/${p
             )
           }
 
-          <a class="edit-link" href={editUrl} target="_blank" rel="noopener noreferrer">
-            <Icon name="external" size={13} /> 在 GitHub 上编辑本文
-          </a>
+          <div class="edit-actions reveal">
+            <a class="edit-link primary" href={editorUrl}>
+              <Icon name="pen" size={13} /> 在编辑器中修改本文
+            </a>
+            <span class="edit-sep" aria-hidden="true">·</span>
+            <a class="edit-link" href={editUrl} target="_blank" rel="noopener noreferrer">
+              <Icon name="external" size={13} /> 在 GitHub 上编辑
+            </a>
+          </div>
 
           <Giscus />
         </footer>
@@ -243,8 +256,14 @@ const editUrl = `https://github.com/${SITE.repo}/edit/main/src/content/posts/${p
     gap: 0.4em;
   }
 
-  .pm-share {
+  .pm-actions {
     margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .pm-btn {
     display: inline-flex;
     align-items: center;
     gap: 0.4em;
@@ -256,7 +275,7 @@ const editUrl = `https://github.com/${SITE.repo}/edit/main/src/content/posts/${p
     transition: border-color 0.2s, color 0.2s, background-color 0.2s, transform 0.2s var(--ease-spring);
   }
 
-  .pm-share:hover {
+  .pm-btn:hover {
     border-color: var(--accent);
     color: var(--accent-ink);
     background: var(--wash);
@@ -322,12 +341,23 @@ const editUrl = `https://github.com/${SITE.repo}/edit/main/src/content/posts/${p
     white-space: nowrap;
   }
 
+  .edit-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    flex-wrap: wrap;
+    margin-top: 1.6rem;
+    font-size: 0.78rem;
+  }
+
+  .edit-sep {
+    color: var(--line2);
+  }
+
   .edit-link {
     display: inline-flex;
     align-items: center;
     gap: 0.4em;
-    margin-top: 1.6rem;
-    font-size: 0.78rem;
     color: var(--ink3);
     opacity: 0.85;
     transition: color 0.2s, opacity 0.2s;
@@ -336,6 +366,16 @@ const editUrl = `https://github.com/${SITE.repo}/edit/main/src/content/posts/${p
   .edit-link:hover {
     color: var(--accent-ink);
     opacity: 1;
+  }
+
+  .edit-link.primary {
+    color: var(--accent-ink);
+    opacity: 1;
+  }
+
+  .edit-link.primary:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
   }
 
   @media (min-width: 1100px) {
