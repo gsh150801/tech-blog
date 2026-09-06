@@ -1535,6 +1535,8 @@ function hello(name: string) {
     localStorage.setItem('ed_token', token);
     closeSettings();
     showToast('凭据已保存到本机浏览器 ✓', 'success');
+    // 从文章页「编辑」进来时：凭据就绪后自动重试加载目标文章
+    if (editFile && !editLoaded) attemptLoadEdit();
   });
 
   // ============================================================
@@ -1647,34 +1649,99 @@ function hello(name: string) {
 
   // ============================================================
   // 启动：先就绪库，再按需加载已有文章（?file=xxx.md 模式）
+  // 编辑模式绝不静默降级成「写文章」：
+  //   - 文件名立即显示目标文件（不回落 my-new-post.md）
+  //   - 凭据缺失 → 横幅提示并打开设置
+  //   - 加载失败 → 持久横幅 + 重试按钮
+  //   - 加载成功前禁用保存，避免把空模板覆盖到目标文件
   // ============================================================
-  if (editFile) {
-    ($('ed-save') as HTMLButtonElement).textContent = '更新到 GitHub';
+  let editLoaded = false;
+
+  function showEditBanner(html: string) {
+    let b = document.getElementById('ed-edit-banner') as HTMLElement | null;
+    if (!b) {
+      b = document.createElement('div');
+      b.id = 'ed-edit-banner';
+      b.style.cssText =
+        'display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;margin:0 0 .75rem;' +
+        'padding:.6rem .95rem;border:1px solid #c0392b;border-radius:10px;' +
+        'background:color-mix(in srgb, #c0392b 7%, transparent);color:#c0392b;' +
+        'font-size:.85rem;line-height:1.6;';
+      (ta.parentElement as HTMLElement).insertBefore(b, ta);
+    }
+    b.innerHTML = html;
   }
 
-  (async () => {
+  function hideEditBanner() {
+    document.getElementById('ed-edit-banner')?.remove();
+  }
+
+  async function attemptLoadEdit() {
+    const btn = $('ed-save') as HTMLButtonElement;
+    setStatus('idle', `加载 ${editFile} …`);
     try {
-      setStatus('idle', '初始化…');
-      if (editFile) {
-        try {
-          const { content } = await getFile(`src/content/posts/${editFile}`);
-          ta.value = content;
-          filenameEl.value = editFile;
-          cacheValue = ta.value;
-          setStatus('idle', '已加载');
-        } catch (e) {
-          showToast(`加载 ${editFile} 失败：${(e as Error).message}`, 'error');
-          cacheValue = ta.value;
-          setStatus('idle', '新文章');
+      const { content } = await getFile(`src/content/posts/${editFile}`);
+      ta.value = content;
+      filenameEl.value = editFile;
+      cacheValue = ta.value;
+      editLoaded = true;
+      btn.disabled = false;
+      hideEditBanner();
+      setStatus('idle', '已加载');
+    } catch (e) {
+      const msg = (e as Error).message;
+      const needCred = /HTTP 40[13]/.test(msg);
+      filenameEl.value = editFile;
+      cacheValue = ta.value;
+      btn.disabled = true;
+      setStatus('idle', '加载失败');
+      showToast(`加载 ${editFile} 失败：${msg}`, 'error');
+      showEditBanner(
+        `<span>加载「${editFile}」失败：${msg}。` +
+          (needCred
+            ? '请先在右上角「GitHub 凭据」里填写有 repo 权限的 Token。'
+            : '检查网络或文件名后重试。') +
+          `</span><button id="ed-retry-load" type="button" style="flex:none;margin-left:auto;padding:.32em 1.1em;border:1px solid currentColor;border-radius:999px;background:transparent;color:inherit;font:inherit;font-size:.82rem;cursor:pointer;">重试</button>`,
+      );
+      document.getElementById('ed-retry-load')?.addEventListener('click', () => attemptLoadEdit());
+      if (needCred) openSettings();
+    }
+  }
+
+  if (editFile) {
+    ($('ed-save') as HTMLButtonElement).textContent = '更新到 GitHub';
+    ($('ed-save') as HTMLButtonElement).disabled = true;
+    filenameEl.value = editFile;
+
+    (async () => {
+      try {
+        setStatus('idle', '初始化…');
+        const cfg = readCfg();
+        if (!cfg.repo || !cfg.token) {
+          setStatus('idle', '待凭据');
+          showEditBanner(
+            `<span>编辑「${editFile}」需要先配置 GitHub 凭据（仓库 + 有 repo 权限的 Token），保存前不会改动任何文件。</span>` +
+              `<button id="ed-open-settings" type="button" style="flex:none;margin-left:auto;padding:.32em 1.1em;border:1px solid currentColor;border-radius:999px;background:transparent;color:inherit;font:inherit;font-size:.82rem;cursor:pointer;">填写凭据</button>`,
+          );
+          document
+            .getElementById('ed-open-settings')
+            ?.addEventListener('click', () => openSettings());
+          openSettings();
+        } else {
+          await attemptLoadEdit();
         }
-      } else {
-        cacheValue = ta.value;
-        setStatus('idle', '就绪');
+        libs = await loadLibs();
+        await updatePreview();
+      } catch (e) {
+        previewEl.innerHTML = `<pre style="color:#b93a1a">编辑器库加载失败：${(e as Error).message}\n请检查网络。</pre>`;
       }
+    })();
+  } else {
+    (async () => {
+      cacheValue = ta.value;
+      setStatus('idle', '就绪');
       libs = await loadLibs();
       await updatePreview();
-    } catch (e) {
-      previewEl.innerHTML = `<pre style="color:#b93a1a">编辑器库加载失败：${(e as Error).message}\n请检查网络。</pre>`;
-    }
-  })();
+    })();
+  }
 </script>
