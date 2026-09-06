@@ -3,11 +3,8 @@ title: 推理优化路线task2
 date: 2026-08-25
 tags: [FlashAttention模拟]
 draft: false
----
-
-
-
-# 一级标题
+series: "LLM推理优化"
+---# 一级标题
 
 [链接](https://astro.build)。
 ## 随着上下文长度增加，KV cache大小一定增加
