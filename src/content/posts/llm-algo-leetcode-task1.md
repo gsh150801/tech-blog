@@ -5,9 +5,8 @@ date: 2026-08-20
 tags: [GPU, 内存层级]
 draft: false
 
----
-
-教程链接：[llm-algo-leetcode](https://github.com/datawhalechina/llm-algo-leetcode)
+series: "LLM推理优化"
+---教程链接：[llm-algo-leetcode](https://github.com/datawhalechina/llm-algo-leetcode)
 
 0. 位数和显存估算
   在计算机底层，1 Byte（字节）= 8 bits（位）。大模型中常见的格式占用如下：
