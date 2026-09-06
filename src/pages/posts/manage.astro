@@ -19,15 +19,21 @@ import { withBase } from '../../utils/path';
         删除操作会真正删掉文件（可在仓库 git 历史找回）。
       </p>
       <div class="head-links">
-        <a class="back-link u-link" href={withBase('/posts/')}>← 文章列表</a>
-        <a class="back-link u-link" href={withBase('/series/manage/')}>合集管理</a>
-        <a class="back-link u-link" href={withBase('/posts/editor/')}>新建文章</a>
+        <a class="back-link u-link" href={withBase('/posts/')}>
+          <Icon name="arrow-left" size={13} /> 文章列表
+        </a>
+        <a class="back-link u-link" href={withBase('/series/manage/')}>
+          <Icon name="folder" size={13} /> 合集管理
+        </a>
+        <a class="back-link u-link" href={withBase('/posts/editor/')}>
+          <Icon name="plus" size={13} /> 新建文章
+        </a>
       </div>
     </header>
 
     <!-- 凭据卡片 -->
     <section class="card cred-card reveal" id="cred-card" hidden>
-      <h2 class="card-title"><Icon name="external" size={15} /> GitHub 凭据</h2>
+      <h2 class="card-title"><Icon name="github" size={15} /> GitHub 凭据</h2>
       <p class="card-desc">
         与在线编辑器共用同一套凭据（只存本机浏览器）。需要一个有 <code>repo</code> 权限的
         <a href="https://github.com/settings/tokens?type=beta" target="_blank" rel="noopener noreferrer">Personal Access Token</a>。
@@ -52,15 +58,28 @@ import { withBase } from '../../utils/path';
     </section>
 
     <div id="app" data-editor-url={withBase('/posts/editor/')} hidden>
-      <!-- 工具条：搜索 + 过滤 + 新建 -->
+      <!-- 工具条：搜索 + 刷新 -->
       <section class="toolbar reveal">
-        <input id="q" type="search" placeholder="按标题或文件名筛选…" />
-        <div class="tabs" role="tablist">
-          <button type="button" class="tab active" data-filter="all">全部 <em id="c-all"></em></button>
-          <button type="button" class="tab" data-filter="pub">已发布 <em id="c-pub"></em></button>
-          <button type="button" class="tab" data-filter="draft">草稿 <em id="c-draft"></em></button>
-        </div>
-        <button class="op-btn" id="btn-refresh" type="button">刷新</button>
+        <label class="search-box">
+          <Icon name="search" size={16} />
+          <input id="q" type="search" placeholder="按标题或文件名筛选…" />
+        </label>
+        <button class="btn btn-sm" id="btn-refresh" type="button">
+          <Icon name="refresh" size={14} /> 刷新
+        </button>
+      </section>
+
+      <!-- 状态筛选卡 -->
+      <section class="filters reveal" role="tablist" aria-label="按状态筛选">
+        <button type="button" class="f-chip active" data-filter="all" role="tab" aria-selected="true">
+          <Icon name="layers" size={15} /> 全部 <em id="c-all">–</em>
+        </button>
+        <button type="button" class="f-chip" data-filter="pub" role="tab" aria-selected="false">
+          <Icon name="globe" size={15} /> 已发布 <em id="c-pub">–</em>
+        </button>
+        <button type="button" class="f-chip" data-filter="draft" role="tab" aria-selected="false">
+          <Icon name="moon" size={15} /> 草稿 <em id="c-draft">–</em>
+        </button>
       </section>
 
       <section id="post-list" class="post-list reveal"></section>
@@ -128,8 +147,17 @@ import { withBase } from '../../utils/path';
   }
 
   .back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35em;
     font-size: 0.85rem;
     color: var(--ink2);
+  }
+
+  .btn-sm {
+    height: 2.3rem;
+    padding: 0 1rem;
+    font-size: 0.84rem;
   }
 
   /* 卡片 */
@@ -218,179 +246,103 @@ import { withBase } from '../../utils/path';
   .toolbar {
     display: flex;
     align-items: center;
-    gap: 0.9rem;
+    gap: 0.8rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.9rem;
+  }
+
+  .search-box {
+    flex: 1;
+    min-width: 14rem;
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.3rem 0.7rem 0.3rem 1.05rem;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--bg1);
+    color: var(--ink3);
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .search-box:focus-within {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 12%, transparent);
+  }
+
+  .search-box input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    outline: none;
+    background: transparent;
+    color: var(--ink);
+    font: inherit;
+    font-size: 0.92rem;
+    padding: 0.45rem 0;
+  }
+
+  .search-box input::placeholder {
+    color: var(--ink3);
+  }
+
+  /* 状态筛选卡 */
+  .filters {
+    display: flex;
+    gap: 0.6rem;
     flex-wrap: wrap;
     margin-bottom: 1.1rem;
   }
 
-  #q {
-    flex: 1;
-    min-width: 12rem;
-    padding: 0.55rem 0.9rem;
-    border: 1px solid var(--line);
-    border-radius: 999px;
-    background: var(--bg1);
-    color: var(--ink);
-    font: inherit;
-    font-size: 0.9rem;
-  }
-
-  #q:focus {
-    outline: none;
-    border-color: var(--accent);
-  }
-
-  .tabs {
+  .f-chip {
     display: inline-flex;
-    border: 1px solid var(--line);
-    border-radius: 999px;
-    overflow: hidden;
-    background: var(--bg1);
-  }
-
-  .tab {
+    align-items: center;
+    gap: 0.5em;
     padding: 0.5rem 1.05rem;
-    font-size: 0.85rem;
+    font-size: 0.86rem;
     color: var(--ink2);
-    transition: background-color 0.15s, color 0.15s;
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    background: var(--bg1);
+    box-shadow: var(--shadow-sm);
+    transition: border-color 0.2s, color 0.2s, background-color 0.2s, transform 0.2s;
   }
 
-  .tab em {
+  .f-chip em {
     font-style: normal;
-    opacity: 0.7;
-    font-size: 0.82em;
+    font-family: var(--font-mono);
+    font-size: 0.8em;
+    min-width: 1.6em;
+    text-align: center;
+    padding: 0.08em 0.5em;
+    border-radius: 999px;
+    background: var(--wash);
+    color: var(--accent-ink);
+    font-variant-numeric: tabular-nums;
   }
 
-  .tab.active {
+  .f-chip:hover {
+    border-color: var(--accent);
+    color: var(--accent-ink);
+    transform: translateY(-1px);
+  }
+
+  .f-chip.active {
     background: var(--ink);
+    border-color: var(--ink);
     color: var(--bg1);
   }
 
-  /* 文章行 */
+  .f-chip.active em {
+    background: color-mix(in srgb, var(--bg1) 18%, transparent);
+    color: var(--bg1);
+  }
+
+  /* 文章列表 */
   .post-list {
     display: flex;
     flex-direction: column;
     gap: 0.8rem;
-  }
-
-  .p-row {
-    padding: 1.05rem 1.25rem;
-    border: 1px solid var(--line);
-    border-radius: var(--r-md);
-    background: var(--bg1);
-    display: flex;
-    flex-direction: column;
-    gap: 0.65rem;
-  }
-
-  .p-row.busy {
-    opacity: 0.5;
-    pointer-events: none;
-  }
-
-  .p-head {
-    display: flex;
-    align-items: baseline;
-    gap: 0.8rem;
-    flex-wrap: wrap;
-  }
-
-  .p-title {
-    font-family: var(--font-display);
-    font-weight: 640;
-    font-size: 1.04rem;
-  }
-
-  .badge {
-    flex: none;
-    font-size: 0.72rem;
-    letter-spacing: 0.08em;
-    padding: 0.14em 0.75em;
-    border-radius: 999px;
-    white-space: nowrap;
-  }
-
-  .badge.pub {
-    color: var(--teal);
-    border: 1px solid color-mix(in srgb, var(--teal) 45%, transparent);
-    background: color-mix(in srgb, var(--teal) 7%, transparent);
-  }
-
-  .badge.draft {
-    color: var(--gold);
-    border: 1px dashed color-mix(in srgb, var(--gold) 50%, transparent);
-    background: color-mix(in srgb, var(--gold) 6%, transparent);
-  }
-
-  .p-file {
-    font-family: var(--font-mono);
-    font-size: 0.74rem;
-    color: var(--ink3);
-  }
-
-  .p-meta {
-    font-size: 0.76rem;
-    color: var(--ink3);
-  }
-
-  .p-series-chip {
-    font-size: 0.74rem;
-    color: var(--accent-ink);
-    border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
-    border-radius: 999px;
-    padding: 0.1em 0.7em;
-  }
-
-  .p-foot {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    flex-wrap: wrap;
-  }
-
-  .move-box {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.3rem;
-  }
-
-  .move-box select {
-    max-width: 11rem;
-    padding: 0.32rem 0.5rem;
-    border: 1px solid var(--line);
-    border-radius: var(--r-sm);
-    background: var(--bg0);
-    color: var(--ink);
-    font-size: 0.8rem;
-  }
-
-  .op-btn {
-    padding: 0.38em 0.9em;
-    font-size: 0.8rem;
-    border: 1px solid var(--line);
-    border-radius: 999px;
-    color: var(--ink2);
-    background: var(--bg0);
-    transition: border-color 0.2s, color 0.2s, background-color 0.2s;
-  }
-
-  .op-btn:hover {
-    border-color: var(--accent);
-    color: var(--accent-ink);
-    background: var(--wash);
-  }
-
-  .op-btn.danger:hover {
-    border-color: #c0392b;
-    color: #c0392b;
-    background: color-mix(in srgb, #c0392b 8%, transparent);
-  }
-
-  .empty-tip {
-    text-align: center;
-    color: var(--ink3);
-    padding: 2.5rem 0;
-    font-size: 0.92rem;
   }
 
   /* 弹窗 */
@@ -426,21 +378,6 @@ import { withBase } from '../../utils/path';
     line-height: 1.75;
   }
 
-  .dlg-body .warn {
-    color: #c0392b;
-    font-size: 0.84rem;
-  }
-
-  .dlg-body ul {
-    margin: 0.5rem 0;
-    padding-left: 1.2em;
-    font-size: 0.86rem;
-  }
-
-  .dlg-body .field {
-    margin-top: 0.7rem;
-  }
-
   .dlg-actions {
     display: flex;
     justify-content: flex-end;
@@ -472,6 +409,7 @@ import { withBase } from '../../utils/path';
     box-shadow: var(--shadow-md);
     z-index: 60;
     opacity: 0;
+    pointer-events: none;
     transition: opacity 0.25s, transform 0.25s var(--ease-spring);
   }
 
@@ -490,6 +428,340 @@ import { withBase } from '../../utils/path';
   }
 </style>
 
+<style is:global>
+  /* ---------- 以下元素由脚本 innerHTML 生成（不带 astro 作用域属性），样式须全局 ---------- */
+
+  .p-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 1.05rem;
+    padding: 1.05rem 1.25rem;
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    background: var(--bg1);
+    transition: border-color 0.25s, box-shadow 0.25s, transform 0.25s var(--ease-out);
+    animation: row-in 0.3s var(--ease-out) backwards;
+  }
+
+  .p-row:hover {
+    border-color: color-mix(in srgb, var(--accent) 35%, var(--line2));
+    box-shadow: var(--shadow-sm);
+    transform: translateY(-1px);
+  }
+
+  .p-row.busy {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  /* 状态图标块：已发布 = 青墨实线 / 草稿 = 金色虚线 */
+  .p-tile {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 2.7rem;
+    height: 2.7rem;
+    margin-top: 0.15rem;
+    border-radius: 10px;
+    border: 1.5px solid color-mix(in srgb, var(--teal) 45%, transparent);
+    background: color-mix(in srgb, var(--teal) 8%, transparent);
+    color: var(--teal);
+    transition: transform 0.3s var(--ease-spring);
+  }
+
+  .p-row:hover .p-tile {
+    transform: rotate(-4deg) scale(1.05);
+  }
+
+  .p-tile.draft {
+    border-style: dashed;
+    border-color: color-mix(in srgb, var(--gold) 55%, transparent);
+    background: color-mix(in srgb, var(--gold) 7%, transparent);
+    color: var(--gold);
+  }
+
+  .p-tile svg {
+    font-size: 1.2rem;
+  }
+
+  .p-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .p-head {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    flex-wrap: wrap;
+  }
+
+  .p-title {
+    font-family: var(--font-display);
+    font-weight: 640;
+    font-size: 1.04rem;
+  }
+
+  .badge {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35em;
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    padding: 0.16em 0.75em;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+
+  .badge svg {
+    font-size: 1em;
+  }
+
+  .badge.pub {
+    color: var(--teal);
+    border: 1px solid color-mix(in srgb, var(--teal) 45%, transparent);
+    background: color-mix(in srgb, var(--teal) 7%, transparent);
+  }
+
+  .badge.draft {
+    color: var(--gold);
+    border: 1px dashed color-mix(in srgb, var(--gold) 50%, transparent);
+    background: color-mix(in srgb, var(--gold) 6%, transparent);
+  }
+
+  .p-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.15rem;
+    flex-wrap: wrap;
+    font-size: 0.76rem;
+    color: var(--ink3);
+  }
+
+  .p-meta svg {
+    font-size: 0.95em;
+    margin-right: 0.3em;
+  }
+
+  .p-file {
+    font-family: var(--font-mono);
+    font-size: 0.74rem;
+    color: var(--ink3);
+    overflow-wrap: anywhere;
+  }
+
+  .p-series-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35em;
+    font-size: 0.74rem;
+    color: var(--accent-ink);
+    border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+    border-radius: 999px;
+    padding: 0.12em 0.7em;
+    background: color-mix(in srgb, var(--accent) 5%, transparent);
+    white-space: nowrap;
+  }
+
+  .p-series-chip svg {
+    font-size: 0.95em;
+  }
+
+  .p-foot {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+    margin-top: 0.15rem;
+    padding-top: 0.55rem;
+    border-top: 1px dashed var(--line);
+  }
+
+  .move-box {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+
+  .move-box select {
+    max-width: 11rem;
+    padding: 0.32rem 0.5rem;
+    border: 1px solid var(--line);
+    border-radius: var(--r-sm);
+    background: var(--bg0);
+    color: var(--ink);
+    font-size: 0.8rem;
+  }
+
+  .op-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35em;
+    padding: 0.4em 0.95em;
+    font-size: 0.8rem;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    color: var(--ink2);
+    background: var(--bg0);
+    transition: border-color 0.2s, color 0.2s, background-color 0.2s, transform 0.2s;
+  }
+
+  .op-btn svg {
+    font-size: 0.95em;
+  }
+
+  .op-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent-ink);
+    background: var(--wash);
+    transform: translateY(-1px);
+  }
+
+  .op-btn.danger:hover {
+    border-color: #c0392b;
+    color: #c0392b;
+    background: color-mix(in srgb, #c0392b 8%, transparent);
+  }
+
+  /* 空态 */
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 3rem 1rem;
+    border: 1.5px dashed var(--line2);
+    border-radius: var(--r-lg);
+    color: var(--ink3);
+    font-size: 0.88rem;
+    text-align: center;
+  }
+
+  .empty-state svg {
+    font-size: 1.9rem;
+    margin-bottom: 0.3rem;
+    opacity: 0.8;
+  }
+
+  .empty-state p {
+    margin: 0;
+  }
+
+  /* 加载骨架 */
+  .sk-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 1.05rem;
+    padding: 1.05rem 1.25rem;
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    background: var(--bg1);
+  }
+
+  .sk {
+    position: relative;
+    overflow: hidden;
+    border-radius: 6px;
+    background: var(--bg2);
+  }
+
+  .sk::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in srgb, var(--bg1) 70%, transparent),
+      transparent
+    );
+    animation: sk-shimmer 1.4s infinite;
+  }
+
+  .sk-tile {
+    flex: none;
+    width: 2.7rem;
+    height: 2.7rem;
+    border-radius: 10px;
+  }
+
+  .sk-lines {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    padding-top: 0.2rem;
+  }
+
+  .sk-lines i {
+    display: block;
+    height: 0.72rem;
+  }
+
+  .sk-lines i:first-child {
+    width: 52%;
+  }
+
+  .sk-lines i:last-child {
+    width: 32%;
+  }
+
+  @keyframes sk-shimmer {
+    to {
+      transform: translateX(100%);
+    }
+  }
+
+  @keyframes row-in {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+  }
+
+  /* 弹窗内动态注入的表单 */
+  .dlg-body .field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    margin-top: 0.8rem;
+    font-size: 0.8rem;
+    color: var(--ink2);
+  }
+
+  .dlg-body .field input {
+    background: var(--bg0);
+    border: 1px solid var(--line);
+    color: var(--ink);
+    padding: 0.55rem 0.75rem;
+    border-radius: var(--r-sm);
+    font: inherit;
+    font-size: 0.92rem;
+    transition: border-color 0.2s;
+  }
+
+  .dlg-body .field input:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  .dlg-body .warn {
+    color: #c0392b;
+    font-size: 0.84rem;
+  }
+
+  .dlg-body ul {
+    margin: 0.5rem 0;
+    padding-left: 1.2em;
+    font-size: 0.86rem;
+  }
+</style>
+
 <script>
   import {
     readCfg,
@@ -505,6 +777,7 @@ import { withBase } from '../../utils/path';
     removeFmKeys,
     cleanFrontmatter,
   } from '../../utils/gh-client';
+  import { ICONS } from '../../utils/icons';
 
   const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
   const POSTS_DIR = 'src/content/posts';
@@ -513,9 +786,15 @@ import { withBase } from '../../utils/path';
   let toastTimer: ReturnType<typeof setTimeout>;
   function showToast(msg: string, kind: 'success' | 'error' | 'info' = 'info') {
     toast.textContent = msg;
-    toast.className = 'toast show ' + (kind === 'info' ? '' : kind);
+    toast.hidden = false;
+    requestAnimationFrame(() => {
+      toast.className = 'toast show ' + (kind === 'info' ? '' : kind);
+    });
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => (toast.className = 'toast'), 3200);
+    toastTimer = setTimeout(() => {
+      toast.className = 'toast';
+      setTimeout(() => (toast.hidden = true), 320);
+    }, 3200);
   }
 
   // ---------- 数据 ----------
@@ -548,8 +827,16 @@ import { withBase } from '../../utils/path';
     };
   }
 
+  const skeleton = (n = 4) =>
+    Array.from(
+      { length: n },
+      () =>
+        '<div class="sk-row"><span class="sk sk-tile"></span><span class="sk-lines"><i class="sk"></i><i class="sk"></i><i class="sk"></i></span></div>',
+    ).join('');
+
   async function loadAll() {
     showToast('正在加载…');
+    $('post-list').innerHTML = skeleton(4);
     const cfg = readCfg();
     // 注册表较小但关键（移入合集的下拉数据源）：失败重试两次
     let regRes: any = null;
@@ -606,14 +893,19 @@ import { withBase } from '../../utils/path';
     const list = visiblePosts();
     listEl.innerHTML = '';
     if (!list.length) {
-      listEl.innerHTML = '<div class="empty-tip">没有匹配的文章。</div>';
+      listEl.innerHTML =
+        posts.length === 0
+          ? `<div class="empty-state">${ICONS.inbox}<p>还没有文章 —— 点右上角「新建文章」写下第一篇吧。</p></div>`
+          : `<div class="empty-state">${ICONS.search}<p>没有匹配的文章，换个关键词或筛选条件试试。</p></div>`;
       return;
     }
 
+    let i = 0;
     for (const p of list) {
       const row = document.createElement('article');
       row.className = 'p-row';
       row.dataset.file = p.file;
+      row.style.animationDelay = `${Math.min(i++, 7) * 40}ms`;
       const dateTxt = p.date
         ? new Date(p.date).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' })
         : '(无日期)';
@@ -621,27 +913,38 @@ import { withBase } from '../../utils/path';
         .map((r) => `<option value="${r.name.replace(/"/g, '&quot;')}">${r.name}</option>`)
         .join('');
       row.innerHTML = `
-        <div class="p-head">
-          <span class="p-title"></span>
-          <span class="badge ${p.draft ? 'draft' : 'pub'}">${p.draft ? '草稿' : '已发布'}</span>
-          ${p.series ? '<span class="p-series-chip"></span>' : ''}
-          <span class="p-meta">${dateTxt}</span>
-          <code class="p-file">${p.file}</code>
-        </div>
-        <div class="p-foot">
-          <button class="op-btn" data-op="edit" type="button">编辑</button>
-          <button class="op-btn" data-op="toggle" type="button">${p.draft ? '发布' : '转为草稿'}</button>
-          ${
-            p.series
-              ? `<button class="op-btn" data-op="unassign" type="button">移出合集</button>`
-              : `<span class="move-box"><select data-role="series-select"><option value="">选择合集…</option>${options}</select>
-                 <button class="op-btn" data-op="assign" type="button">移入</button></span>`
-          }
-          <button class="op-btn" data-op="rename" type="button">改名</button>
-          <button class="op-btn danger" data-op="delete" type="button">删除</button>
+        <div class="p-tile ${p.draft ? 'draft' : 'pub'}" aria-hidden="true">${p.draft ? ICONS.pen : ICONS.doc}</div>
+        <div class="p-main">
+          <div class="p-head">
+            <span class="p-title"></span>
+            <span class="badge ${p.draft ? 'draft' : 'pub'}">${p.draft ? ICONS.clock : ICONS['check-circle']}<span>${p.draft ? '草稿' : '已发布'}</span></span>
+            ${p.series ? '<span class="p-series-chip"></span>' : ''}
+          </div>
+          <div class="p-meta">
+            <span>${ICONS.calendar}<span class="p-date"></span></span>
+            <span class="dot-sep"></span>
+            <code class="p-file">${p.file}</code>
+          </div>
+          <div class="p-foot">
+            <button class="op-btn" data-op="edit" type="button">${ICONS.pen}编辑</button>
+            <button class="op-btn" data-op="toggle" type="button">${p.draft ? ICONS.upload : ICONS.moon}${p.draft ? '发布' : '转为草稿'}</button>
+            ${
+              p.series
+                ? `<button class="op-btn" data-op="unassign" type="button">${ICONS['folder-x']}移出合集</button>`
+                : `<span class="move-box"><select data-role="series-select"><option value="">选择合集…</option>${options}</select>
+                   <button class="op-btn" data-op="assign" type="button">${ICONS['folder-plus']}移入</button></span>`
+            }
+            <button class="op-btn" data-op="rename" type="button">${ICONS.text}改名</button>
+            <button class="op-btn danger" data-op="delete" type="button">${ICONS.trash}删除</button>
+          </div>
         </div>`;
       (row.querySelector('.p-title') as HTMLElement).textContent = p.title;
-      if (p.series) (row.querySelector('.p-series-chip') as HTMLElement).textContent = `📁 ${p.series}`;
+      (row.querySelector('.p-date') as HTMLElement).textContent = dateTxt;
+      if (p.series) {
+        const chip = row.querySelector('.p-series-chip') as HTMLElement;
+        chip.innerHTML = `${ICONS.folder}<span></span>`;
+        (chip.querySelector('span') as HTMLElement).textContent = p.series;
+      }
       listEl.appendChild(row);
     }
   }
@@ -833,10 +1136,13 @@ import { withBase } from '../../utils/path';
   // ---------- 工具条 ----------
   $('q').addEventListener('input', render);
   $('btn-refresh').addEventListener('click', () => loadAll().catch((e) => showToast(e.message, 'error')));
-  document.querySelectorAll('.tab').forEach((t) =>
+  document.querySelectorAll('.f-chip').forEach((t) =>
     t.addEventListener('click', () => {
       filterMode = t.dataset.filter as any;
-      document.querySelectorAll('.tab').forEach((x) => x.classList.toggle('active', x === t));
+      document.querySelectorAll('.f-chip').forEach((x) => {
+        x.classList.toggle('active', x === t);
+        x.setAttribute('aria-selected', x === t ? 'true' : 'false');
+      });
       render();
     }),
   );

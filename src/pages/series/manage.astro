@@ -19,12 +19,14 @@ import { withBase } from '../../utils/path';
       <p class="page-desc">
         新建、改名、改描述、删除合集。改名会自动同步所有成员文章；删除合集<strong>不会删文章</strong>，只是解除归卷。
       </p>
-      <a class="back-link u-link" href={withBase('/series/')}>← 返回合集书架</a>
+      <a class="back-link u-link" href={withBase('/series/')}>
+        <Icon name="arrow-left" size={13} /> 返回合集书架
+      </a>
     </header>
 
     <!-- 凭据卡片 -->
     <section class="card cred-card reveal" id="cred-card" hidden>
-      <h2 class="card-title"><Icon name="external" size={15} /> GitHub 凭据</h2>
+      <h2 class="card-title"><Icon name="github" size={15} /> GitHub 凭据</h2>
       <p class="card-desc">
         与在线编辑器共用同一套凭据（只存本机浏览器）。需要一个有 <code>repo</code> 权限的
         <a href="https://github.com/settings/tokens?type=beta" target="_blank" rel="noopener noreferrer">Personal Access Token</a>。
@@ -70,7 +72,7 @@ import { withBase } from '../../utils/path';
         <div class="card-actions">
           <span class="hint">建好后写文章时把 frontmatter 的 <code>series</code> 填成合集名即可自动归卷。</span>
           <button class="btn btn-primary" id="btn-create" type="button">
-            <Icon name="check" size={14} /> 创建
+            <Icon name="plus" size={14} /> 创建合集
           </button>
         </div>
       </section>
@@ -78,8 +80,15 @@ import { withBase } from '../../utils/path';
       <!-- 列表 -->
       <section class="reveal">
         <div class="list-head">
-          <h2 class="card-title"><Icon name="folder" size={15} /> 全部合集</h2>
-          <button class="btn btn-sm" id="btn-refresh" type="button">刷新</button>
+          <div>
+            <h2 class="card-title"><Icon name="book" size={15} /> 全部合集</h2>
+            <p class="list-sub">
+              注册表 + 文章携带 · 共 <b id="stat-series">–</b> 卷 · <b id="stat-posts">–</b> 篇文章
+            </p>
+          </div>
+          <button class="btn btn-sm" id="btn-refresh" type="button">
+            <Icon name="refresh" size={14} /> 刷新
+          </button>
         </div>
         <div id="series-list" class="series-list"></div>
       </section>
@@ -140,7 +149,9 @@ import { withBase } from '../../utils/path';
   }
 
   .back-link {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35em;
     margin-top: 1rem;
     font-size: 0.85rem;
     color: var(--ink2);
@@ -252,96 +263,23 @@ import { withBase } from '../../utils/path';
     margin: 0;
   }
 
+  .list-sub {
+    margin: 0.15rem 0 0;
+    font-size: 0.78rem;
+    color: var(--ink3);
+    letter-spacing: 0.02em;
+  }
+
+  .list-sub b {
+    color: var(--accent-ink);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
   .series-list {
     display: flex;
     flex-direction: column;
     gap: 0.8rem;
-  }
-
-  .s-row {
-    display: flex;
-    align-items: center;
-    gap: 1.1rem;
-    padding: 1.05rem 1.25rem;
-    border: 1px solid var(--line);
-    border-radius: var(--r-md);
-    background: var(--bg1);
-    flex-wrap: wrap;
-  }
-
-  .s-row.busy {
-    opacity: 0.55;
-    pointer-events: none;
-  }
-
-  .s-info {
-    flex: 1;
-    min-width: 14rem;
-  }
-
-  .s-name {
-    font-family: var(--font-display);
-    font-weight: 640;
-    font-size: 1.05rem;
-  }
-
-  .s-slug {
-    font-family: var(--font-mono);
-    font-size: 0.76rem;
-    color: var(--ink3);
-  }
-
-  .s-desc {
-    margin: 0.25rem 0 0;
-    font-size: 0.85rem;
-    color: var(--ink2);
-  }
-
-  .s-count {
-    flex: none;
-    font-size: 0.82rem;
-    color: var(--ink2);
-    padding: 0.25em 0.85em;
-    border: 1px solid var(--line2);
-    border-radius: 999px;
-    white-space: nowrap;
-  }
-
-  .badge-unreg {
-    font-size: 0.7rem;
-    color: var(--gold);
-    border: 1px dashed color-mix(in srgb, var(--gold) 50%, transparent);
-    border-radius: 999px;
-    padding: 0.12em 0.7em;
-    white-space: nowrap;
-  }
-
-  .s-ops {
-    display: flex;
-    gap: 0.4rem;
-    flex-wrap: wrap;
-  }
-
-  .op-btn {
-    padding: 0.38em 0.9em;
-    font-size: 0.8rem;
-    border: 1px solid var(--line);
-    border-radius: 999px;
-    color: var(--ink2);
-    background: var(--bg0);
-    transition: border-color 0.2s, color 0.2s, background-color 0.2s;
-  }
-
-  .op-btn:hover {
-    border-color: var(--accent);
-    color: var(--accent-ink);
-    background: var(--wash);
-  }
-
-  .op-btn.danger:hover {
-    border-color: #c0392b;
-    color: #c0392b;
-    background: color-mix(in srgb, #c0392b 8%, transparent);
   }
 
   .dlg::backdrop {
@@ -376,21 +314,6 @@ import { withBase } from '../../utils/path';
     line-height: 1.75;
   }
 
-  .dlg-body .field {
-    margin-top: 0.7rem;
-  }
-
-  .dlg-body .warn {
-    color: #c0392b;
-    font-size: 0.84rem;
-  }
-
-  .dlg-body ul {
-    margin: 0.5rem 0;
-    padding-left: 1.2em;
-    font-size: 0.86rem;
-  }
-
   .dlg-actions {
     display: flex;
     justify-content: flex-end;
@@ -412,6 +335,7 @@ import { withBase } from '../../utils/path';
     box-shadow: var(--shadow-md);
     z-index: 60;
     opacity: 0;
+    pointer-events: none;
     transition: opacity 0.25s, transform 0.25s var(--ease-spring);
   }
 
@@ -440,8 +364,313 @@ import { withBase } from '../../utils/path';
   }
 </style>
 
+<style is:global>
+  /* ---------- 以下元素由脚本 innerHTML 生成（不带 astro 作用域属性），样式须全局 ---------- */
+
+  .s-row {
+    display: flex;
+    align-items: center;
+    gap: 1.1rem;
+    padding: 1.05rem 1.25rem;
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    background: var(--bg1);
+    flex-wrap: wrap;
+    transition: border-color 0.25s, box-shadow 0.25s, transform 0.25s var(--ease-out);
+    animation: row-in 0.3s var(--ease-out) backwards;
+  }
+
+  .s-row:hover {
+    border-color: color-mix(in srgb, var(--accent) 35%, var(--line2));
+    box-shadow: var(--shadow-sm);
+    transform: translateY(-1px);
+  }
+
+  .s-row.busy {
+    opacity: 0.55;
+    pointer-events: none;
+  }
+
+  /* 书脊图标块：呼应书架页的「卷」印章 */
+  .s-tile {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 3.3rem;
+    height: 4.1rem;
+    border-radius: 10px;
+    border: 1.5px solid color-mix(in srgb, var(--accent) 55%, transparent);
+    background: color-mix(in srgb, var(--accent) 7%, transparent);
+    color: var(--accent-ink);
+    transform: rotate(2deg);
+    transition: transform 0.3s var(--ease-spring);
+  }
+
+  .s-tile svg {
+    font-size: 1.3rem;
+  }
+
+  .s-row:hover .s-tile {
+    transform: rotate(-2deg) scale(1.06);
+  }
+
+  .s-row.unreg .s-tile {
+    border-style: dashed;
+    border-color: color-mix(in srgb, var(--gold) 55%, transparent);
+    background: color-mix(in srgb, var(--gold) 7%, transparent);
+    color: var(--gold);
+  }
+
+  .s-info {
+    flex: 1;
+    min-width: 13rem;
+  }
+
+  .s-name-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+  }
+
+  .s-name {
+    font-family: var(--font-display);
+    font-weight: 640;
+    font-size: 1.05rem;
+  }
+
+  .s-slug {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45em;
+    margin-top: 0.12rem;
+    font-family: var(--font-mono);
+    font-size: 0.76rem;
+    color: var(--ink3);
+  }
+
+  .s-slug svg {
+    font-size: 0.95em;
+  }
+
+  .s-slug span {
+    overflow-wrap: anywhere;
+  }
+
+  .s-desc {
+    margin: 0.3rem 0 0;
+    font-size: 0.85rem;
+    color: var(--ink2);
+    line-height: 1.7;
+  }
+
+  .s-count {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4em;
+    font-size: 0.82rem;
+    color: var(--ink2);
+    padding: 0.28em 0.9em;
+    border: 1px solid var(--line2);
+    border-radius: 999px;
+    background: var(--bg0);
+    white-space: nowrap;
+  }
+
+  .s-count svg {
+    font-size: 0.95em;
+    color: var(--ink3);
+  }
+
+  .s-count b {
+    font-weight: 600;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .badge-unreg {
+    font-size: 0.7rem;
+    color: var(--gold);
+    border: 1px dashed color-mix(in srgb, var(--gold) 50%, transparent);
+    border-radius: 999px;
+    padding: 0.14em 0.7em;
+    white-space: nowrap;
+  }
+
+  .s-ops {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+  }
+
+  .op-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35em;
+    padding: 0.4em 0.95em;
+    font-size: 0.8rem;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    color: var(--ink2);
+    background: var(--bg0);
+    transition: border-color 0.2s, color 0.2s, background-color 0.2s, transform 0.2s;
+  }
+
+  .op-btn svg {
+    font-size: 0.95em;
+  }
+
+  .op-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent-ink);
+    background: var(--wash);
+    transform: translateY(-1px);
+  }
+
+  .op-btn.danger:hover {
+    border-color: #c0392b;
+    color: #c0392b;
+    background: color-mix(in srgb, #c0392b 8%, transparent);
+  }
+
+  /* 空态 */
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 3rem 1rem;
+    border: 1.5px dashed var(--line2);
+    border-radius: var(--r-lg);
+    color: var(--ink3);
+    font-size: 0.88rem;
+    text-align: center;
+  }
+
+  .empty-state svg {
+    font-size: 1.9rem;
+    margin-bottom: 0.3rem;
+    opacity: 0.8;
+  }
+
+  .empty-state p {
+    margin: 0;
+  }
+
+  /* 加载骨架 */
+  .sk-row {
+    display: flex;
+    align-items: center;
+    gap: 1.1rem;
+    padding: 1.05rem 1.25rem;
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    background: var(--bg1);
+  }
+
+  .sk {
+    position: relative;
+    overflow: hidden;
+    border-radius: 6px;
+    background: var(--bg2);
+  }
+
+  .sk::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in srgb, var(--bg1) 70%, transparent),
+      transparent
+    );
+    animation: sk-shimmer 1.4s infinite;
+  }
+
+  .sk-tile {
+    flex: none;
+    width: 3.3rem;
+    height: 4.1rem;
+    border-radius: 10px;
+  }
+
+  .sk-lines {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+
+  .sk-lines i {
+    display: block;
+    height: 0.72rem;
+  }
+
+  .sk-lines i:first-child {
+    width: 52%;
+  }
+
+  .sk-lines i:last-child {
+    width: 32%;
+  }
+
+  @keyframes sk-shimmer {
+    to {
+      transform: translateX(100%);
+    }
+  }
+
+  @keyframes row-in {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+  }
+
+  /* 弹窗内动态注入的表单 */
+  .dlg-body .field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    margin-top: 0.8rem;
+    font-size: 0.8rem;
+    color: var(--ink2);
+  }
+
+  .dlg-body .field input {
+    background: var(--bg0);
+    border: 1px solid var(--line);
+    color: var(--ink);
+    padding: 0.55rem 0.75rem;
+    border-radius: var(--r-sm);
+    font: inherit;
+    font-size: 0.92rem;
+    transition: border-color 0.2s;
+  }
+
+  .dlg-body .field input:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  .dlg-body .warn {
+    color: #c0392b;
+    font-size: 0.84rem;
+  }
+
+  .dlg-body ul {
+    margin: 0.5rem 0;
+    padding-left: 1.2em;
+    font-size: 0.86rem;
+  }
+</style>
+
 <script>
   import { readCfg, gh, b64d, putFile } from '../../utils/gh-client';
+  import { ICONS } from '../../utils/icons';
 
   // ============================================================
   // 合集管理台：注册表(src/data/series.json) + 成员文章 的在线 CRUD
@@ -458,9 +687,15 @@ import { withBase } from '../../utils/path';
   let toastTimer: ReturnType<typeof setTimeout>;
   function showToast(msg: string, kind: 'success' | 'error' | 'info' = 'info') {
     toast.textContent = msg;
-    toast.className = 'toast show ' + (kind === 'info' ? '' : kind);
+    toast.hidden = false;
+    requestAnimationFrame(() => {
+      toast.className = 'toast show ' + (kind === 'info' ? '' : kind);
+    });
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => (toast.className = 'toast'), 3000);
+    toastTimer = setTimeout(() => {
+      toast.className = 'toast';
+      setTimeout(() => (toast.hidden = true), 300);
+    }, 3000);
   }
 
   // ---------- 状态 ----------
@@ -480,8 +715,16 @@ import { withBase } from '../../utils/path';
     return v.replace(/^["']|["']$/g, '');
   }
 
+  const skeleton = (n = 4) =>
+    Array.from(
+      { length: n },
+      () =>
+        '<div class="sk-row"><span class="sk sk-tile"></span><span class="sk-lines"><i class="sk"></i><i class="sk"></i></span></div>',
+    ).join('');
+
   async function loadAll() {
     showToast('正在加载合集与文章…');
+    $('series-list').innerHTML = skeleton(4);
     const cfg = readCfg();
     const [regRes, dirRes] = await Promise.all([
       gh(`/repos/${cfg.repo}/contents/${SERIES_PATH}?ref=${cfg.branch}`),
@@ -522,30 +765,44 @@ import { withBase } from '../../utils/path';
       counts.set(p.series, (counts.get(p.series) ?? 0) + 1);
     }
 
+    $('stat-series').textContent = String(names.size);
+    $('stat-posts').textContent = String(postFiles.length);
+
+    if (!names.size) {
+      list.innerHTML = `<div class="empty-state">${ICONS.inbox}<p>还没有合集 —— 在上方「新建合集」开出第一卷吧。</p></div>`;
+      return;
+    }
+
     list.innerHTML = '';
+    let i = 0;
     for (const name of names) {
       const reg = registry.find((r) => r.name === name);
       const n = counts.get(name) ?? 0;
       const row = document.createElement('div');
-      row.className = 's-row';
+      row.className = reg ? 's-row' : 's-row unreg';
       row.dataset.name = name;
+      row.style.animationDelay = `${Math.min(i++, 7) * 40}ms`;
       row.innerHTML = `
+        <div class="s-tile" aria-hidden="true">${reg ? ICONS.book : ICONS['folder-plus']}</div>
         <div class="s-info">
-          <div class="s-name"></div>
-          <div class="s-slug"></div>
+          <div class="s-name-row">
+            <span class="s-name"></span>
+            ${reg ? '' : '<span class="badge-unreg">未注册 · 仅文章携带</span>'}
+          </div>
+          <div class="s-slug">${ICONS.link}<span></span></div>
           ${reg?.description ? '<p class="s-desc"></p>' : ''}
         </div>
-        ${reg ? '' : '<span class="badge-unreg">未注册（仅文章携带）</span>'}
-        <span class="s-count">${n} 篇</span>
+        <span class="s-count">${ICONS.doc}<b></b>&nbsp;篇</span>
         <div class="s-ops">
-          ${reg ? '' : '<button class="op-btn" data-op="adopt" type="button">收录进注册表</button>'}
-          <button class="op-btn" data-op="rename" type="button">改名</button>
-          <button class="op-btn" data-op="edit" type="button">编辑</button>
-          <button class="op-btn danger" data-op="delete" type="button">删除</button>
+          ${reg ? '' : `<button class="op-btn" data-op="adopt" type="button">${ICONS.download}收录</button>`}
+          <button class="op-btn" data-op="rename" type="button">${ICONS.pen}改名</button>
+          <button class="op-btn" data-op="edit" type="button">${ICONS.sliders}编辑</button>
+          <button class="op-btn danger" data-op="delete" type="button">${ICONS.trash}删除</button>
         </div>`;
       (row.querySelector('.s-name') as HTMLElement).textContent = name;
-      (row.querySelector('.s-slug') as HTMLElement).textContent = `/series/${reg?.slug ?? encodeURIComponent(name)}/`;
+      (row.querySelector('.s-slug span') as HTMLElement).textContent = `/series/${reg?.slug ?? encodeURIComponent(name)}/`;
       if (reg?.description) (row.querySelector('.s-desc') as HTMLElement).textContent = reg.description;
+      (row.querySelector('.s-count b') as HTMLElement).textContent = String(n);
       list.appendChild(row);
     }
   }
