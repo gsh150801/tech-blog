@@ -1002,8 +1002,21 @@ function hello(name: string) {
 <script>
   // ============================================================
   // 0) 共享客户端（GitHub API / frontmatter 清洗）
+  //    注意：本模块在 ClientRouter 软导航下只执行一次，
+  //    引导逻辑全部放在 initEditor() 里，靠 astro:page-load 每次进入编辑器页时重跑
+  //    （否则第二次进入会停留在静态「写文章」状态）。
   // ============================================================
   import { getFile } from '../../utils/gh-client';
+
+  function initEditor() {
+    // astro:page-load 在每个页面都会触发；非编辑器页直接跳过
+    if (!document.getElementById('ed-textarea')) return;
+
+    // 重跑引导前解绑上一轮的 document/window 级监听，避免叠加
+    const prevEdSig = (window as any).__edAbortSignal as AbortController | undefined;
+    prevEdSig?.abort();
+    const edSig = new AbortController();
+    (window as any).__edAbortSignal = edSig;
 
   // ============================================================
   // 1) marked (markdown) + KaTeX (LaTeX) + DOMPurify (XSS 防护)
@@ -1386,21 +1399,21 @@ function hello(name: string) {
     if (!e.dataTransfer?.types.includes('Files')) return;
     dragCount++;
     shell.classList.add('drop-active');
-  });
+  }, { signal: edSig.signal });
   window.addEventListener('dragleave', () => {
     dragCount = Math.max(0, dragCount - 1);
     if (!dragCount) shell.classList.remove('drop-active');
-  });
+  }, { signal: edSig.signal });
   window.addEventListener('dragover', (e) => {
     if (e.dataTransfer?.types.includes('Files')) e.preventDefault();
-  });
+  }, { signal: edSig.signal });
   window.addEventListener('drop', (e) => {
     if (!e.dataTransfer?.files?.length) return;
     e.preventDefault();
     dragCount = 0;
     shell.classList.remove('drop-active');
     handleFiles(Array.from(e.dataTransfer.files));
-  });
+  }, { signal: edSig.signal });
 
   // ============================================================
   // 5) 保存到 GitHub（PUT /contents API）
@@ -1590,12 +1603,12 @@ function hello(name: string) {
     if (!(e.target as HTMLElement).closest('#ed-appearance-pop, #ed-appearance')) {
       pop.hidden = true;
     }
-  });
+  }, { signal: edSig.signal });
 
   // Escape 关闭
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && !pop.hidden) pop.hidden = true;
-  });
+  }, { signal: edSig.signal });
 
   applyAppearance();
 
@@ -1645,7 +1658,7 @@ function hello(name: string) {
       e.preventDefault();
       e.returnValue = '';
     }
-  });
+  }, { signal: edSig.signal });
 
   // ============================================================
   // 启动：先就绪库，再按需加载已有文章（?file=xxx.md 模式）
@@ -1744,4 +1757,8 @@ function hello(name: string) {
       await updatePreview();
     })();
   }
+  }
+
+  // 初次加载与每次软导航进入编辑器页时都会触发
+  document.addEventListener('astro:page-load', initEditor);
 </script>
