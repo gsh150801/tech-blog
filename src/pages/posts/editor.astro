@@ -552,13 +552,30 @@ function hello(name: string) {
   }
 
   .ed-preview {
+    /* 预览区跟随站点纸墨主题：shell 外观档位（宣纸/深墨）只应作用于编辑器自身，
+       这里把被 .editor-shell 覆盖的站点变量重新钉回站点值（浅色档） */
+    --line: #e3dac4;
+    --ink: #27211a;
+    --ink2: #665d4c;
+    --ink3: #9a917c;
+    --accent: #b93a1a;
+    --accent-deep: #96290d;
+    --wash: #f4e3d6;
     background: #fbf7ec;
     color: #27211a;
     overflow-y: auto;
   }
 
-  [data-theme='dark'] .ed-preview,
-  .editor-shell[data-theme='dark'] .ed-preview {
+  /* 站点为深墨主题时，预览区整体换深色档。
+     data-site-theme 由脚本镜像 <html> 的主题（:global 在本组件样式里不可靠） */
+  .editor-shell[data-site-theme='dark'] .ed-preview {
+    --line: #2d261c;
+    --ink: #ece2cd;
+    --ink2: #b2a68d;
+    --ink3: #827763;
+    --accent: #ff7448;
+    --accent-deep: #ff8f6b;
+    --wash: #37241a;
     background: #1a1610;
     color: #ece2cd;
   }
@@ -657,7 +674,7 @@ function hello(name: string) {
 
   .ed-preview-body h2 {
     font-size: 1.5rem;
-    border-bottom: 1px solid #e3dac4;
+    border-bottom: 1px solid var(--line);
     padding-bottom: 0.35em;
   }
 
@@ -673,13 +690,13 @@ function hello(name: string) {
     margin: 1.4em 0;
     padding: 0.7em 1.2em;
     border-left: 3px solid var(--accent);
-    background: rgba(185, 58, 26, 0.07);
+    background: var(--wash);
     color: var(--ink2);
     border-radius: 0 6px 6px 0;
   }
 
   .ed-preview-body code:not(pre code) {
-    background: rgba(185, 58, 26, 0.1);
+    background: var(--wash);
     color: var(--accent-deep);
     padding: 0.1em 0.4em;
     border-radius: 4px;
@@ -687,18 +704,12 @@ function hello(name: string) {
   }
 
   .ed-preview-body pre {
-    background: #fbf7ec;
-    color: #27211a;
+    background: var(--code-bg);
+    color: var(--ink);
     padding: 0.9rem 1.1rem;
     border-radius: 8px;
     overflow-x: auto;
     font-size: 0.88rem;
-  }
-
-  [data-theme='dark'] .ed-preview-body pre,
-  .editor-shell .ed-preview-body pre {
-    background: #16120d;
-    color: #ece2cd;
   }
 
   .ed-preview-body table {
@@ -710,12 +721,12 @@ function hello(name: string) {
 
   .ed-preview-body th,
   .ed-preview-body td {
-    border: 1px solid #e3dac4;
+    border: 1px solid var(--line);
     padding: 0.5em 0.9em;
   }
 
   .ed-preview-body th {
-    background: rgba(185, 58, 26, 0.06);
+    background: var(--bg2);
     font-family: 'Fraunces', serif;
     font-weight: 640;
   }
@@ -1612,6 +1623,18 @@ function hello(name: string) {
   }, { signal: edSig.signal });
 
   applyAppearance();
+
+  // 预览区跟随站点纸墨主题：把 <html> 的主题镜像到 shell（CSS 据此切换预览配色）。
+  // 重初始化时先断开上一轮的观察器，避免叠加。
+  const syncSiteTheme = () => {
+    shell.dataset.siteTheme = document.documentElement.dataset.theme || 'light';
+  };
+  const prevThemeMo = (window as any).__edSiteThemeMo as MutationObserver | undefined;
+  prevThemeMo?.disconnect();
+  const themeMo = new MutationObserver(syncSiteTheme);
+  themeMo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  (window as any).__edSiteThemeMo = themeMo;
+  syncSiteTheme();
 
   // ============================================================
   // 7) 监听输入 & 快捷键
