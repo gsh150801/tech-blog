@@ -2,6 +2,7 @@
 import Base from '../../layouts/Base.astro';
 import Icon from '../../components/Icon.astro';
 import { SITE } from '../../config';
+import { withBase } from '../../utils/path';
 
 const today = new Date().toISOString().slice(0, 10);
 
@@ -59,7 +60,7 @@ function hello(name: string) {
   <div class="editor-shell">
     <header class="ed-bar" id="ed-bar">
       <div class="ed-bar-left">
-        <a href="/" class="ed-logo">
+        <a href={withBase('/')} class="ed-logo">
           <Icon name="arrow-left" size={16} /> 拾集
         </a>
         <span class="ed-divider" aria-hidden="true">/</span>
