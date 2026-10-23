@@ -36,8 +36,11 @@ const next = idx > 0 ? all[idx - 1] : null;
 const seriesEntry = (await resolveSeries(all)).find((s) => s.name === post.data.series);
 const seriesPosts = seriesEntry?.posts;
 const seriesSlug = seriesEntry?.slug ?? '';
-const editUrl = `https://github.com/${SITE.repo}/edit/main/src/content/posts/${post.id}.md`;
-const editorUrl = `${withBase('/posts/editor/')}?file=${encodeURIComponent(`${post.id}.md`)}`;
+// post.id 是 slug 化的（小写），仓库里的真实文件名可能大小写不同（如 Quantization_Theory.md），
+// GitHub API 对大小写敏感，必须用真实文件名
+const rawFile = post.filePath?.split('/').pop() ?? `${post.id}.md`;
+const editUrl = `https://github.com/${SITE.repo}/edit/main/src/content/posts/${rawFile}`;
+const editorUrl = `${withBase('/posts/editor/')}?file=${encodeURIComponent(rawFile)}`;
 ---
 
 <Base

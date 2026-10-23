@@ -1704,6 +1704,7 @@ function hello(name: string) {
     } catch (e) {
       const msg = (e as Error).message;
       const needCred = /HTTP 40[13]/.test(msg);
+      const notFound = /HTTP 404/.test(msg);
       filenameEl.value = editFile;
       cacheValue = ta.value;
       btn.disabled = true;
@@ -1713,7 +1714,9 @@ function hello(name: string) {
         `<span>加载「${editFile}」失败：${msg}。` +
           (needCred
             ? '请先在右上角「GitHub 凭据」里填写有 repo 权限的 Token。'
-            : '检查网络或文件名后重试。') +
+            : notFound
+              ? '仓库该分支上找不到这个文件（可能已删除/改名，或文件名大小写不一致）。'
+              : '检查网络后重试。') +
           `</span><button id="ed-retry-load" type="button" style="flex:none;margin-left:auto;padding:.32em 1.1em;border:1px solid currentColor;border-radius:999px;background:transparent;color:inherit;font:inherit;font-size:.82rem;cursor:pointer;">重试</button>`,
       );
       document.getElementById('ed-retry-load')?.addEventListener('click', () => attemptLoadEdit());
