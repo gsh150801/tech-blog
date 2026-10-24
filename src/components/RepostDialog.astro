@@ -1,0 +1,447 @@
+---
+/**
+ * 转发文章到小红书 / 微信公众号 / 知乎。
+ * 三平台均无公开转发 API，采用「平台适配复制 + 打开创作页」：
+ *   知乎   → 富文本 HTML（编辑器直接粘贴，保留标题/图片/代码块）
+ *   公众号 → 内联样式 HTML（微信编辑器会剥离 class，只认内联样式）
+ *   小红书 → 纯文字（笔记需配图发布，文字作底稿）
+ * 另附「复制 Markdown 源码」（从 GitHub raw 拉取）供任意平台使用。
+ *
+ * 事件全部走 document 委托：ClientRouter 软导航换页后监听不失效，
+ * 文章数据（标题/文件名）从当前 dialog 的 data-* 读取，天然跟随页面。
+ */
+import Icon from './Icon.astro';
+import { SITE } from '../config';
+
+interface Props {
+  title: string;
+  /** 仓库中真实文件名（如 Quantization_Theory.md），用于拉取 Markdown 源码 */
+  file: string;
+}
+
+const { title, file } = Astro.props;
+---
+
+<dialog id="repost-dlg" class="rp-dlg" data-title={title} data-file={file} data-repo={SITE.repo}>
+  <div class="rp-box">
+    <header class="rp-head">
+      <h2><Icon name="send" size={16} /> 转发文章</h2>
+      <button class="rp-close icon-btn" type="button" data-rp-close aria-label="关闭">
+        <Icon name="close" size={16} />
+      </button>
+    </header>
+
+    <p class="rp-intro">
+      按平台格式一键复制，再到对应平台粘贴发布。知乎 / 公众号保留标题、图片与代码块排版；
+      小红书为纯文字底稿（笔记需配图，可另存文中图片上传）。
+    </p>
+
+    <div class="rp-cards">
+      <div class="rp-card">
+        <span class="rp-icon"><Icon name="zhihu" size={26} /></span>
+        <div class="rp-info">
+          <b>知乎专栏</b>
+          <span>复制富文本 → 粘贴到知乎文章编辑器</span>
+        </div>
+        <div class="rp-ops">
+          <button class="rp-copy" type="button" data-rp-copy="zhihu">复制内容</button>
+          <a class="rp-open" href="https://zhuanlan.zhihu.com/write" target="_blank" rel="noopener noreferrer">打开编辑器</a>
+        </div>
+      </div>
+
+      <div class="rp-card">
+        <span class="rp-icon"><Icon name="wechat" size={26} /></span>
+        <div class="rp-info">
+          <b>微信公众号</b>
+          <span>复制内联样式排版 → 粘贴到公众号编辑器</span>
+        </div>
+        <div class="rp-ops">
+          <button class="rp-copy" type="button" data-rp-copy="wechat">复制内容</button>
+          <a class="rp-open" href="https://mp.weixin.qq.com/" target="_blank" rel="noopener noreferrer">打开后台</a>
+        </div>
+      </div>
+
+      <div class="rp-card">
+        <span class="rp-icon"><Icon name="xiaohongshu" size={26} /></span>
+        <div class="rp-info">
+          <b>小红书</b>
+          <span>复制纯文字底稿 → 配图后发布笔记</span>
+        </div>
+        <div class="rp-ops">
+          <button class="rp-copy" type="button" data-rp-copy="xhs">复制文字</button>
+          <a class="rp-open" href="https://creator.xiaohongshu.com/publish/publish" target="_blank" rel="noopener noreferrer">打开创作平台</a>
+        </div>
+      </div>
+    </div>
+
+    <footer class="rp-foot">
+      任意平台通用：<button class="rp-md" type="button" data-rp-copy="md">复制 Markdown 源码</button>
+      （从仓库拉取）
+    </footer>
+  </div>
+</dialog>
+
+<style>
+  .rp-dlg {
+    border: 0;
+    padding: 0;
+    background: transparent;
+    color: var(--ink);
+  }
+
+  .rp-dlg::backdrop {
+    background: rgb(20 14 6 / 55%);
+    backdrop-filter: blur(6px);
+  }
+
+  .rp-box {
+    width: min(30rem, calc(100% - 2rem));
+    max-height: calc(100dvh - 6rem);
+    overflow-y: auto;
+    background: var(--bg1);
+    border: 1px solid var(--line2);
+    border-radius: var(--r-lg);
+    padding: 1.4rem 1.5rem 1.2rem;
+    box-shadow: var(--shadow-lg);
+  }
+
+  .rp-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.7rem;
+  }
+
+  .rp-head h2 {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.12rem;
+    margin: 0;
+  }
+
+  .rp-intro {
+    margin: 0 0 1rem;
+    font-size: 0.85rem;
+    color: var(--ink2);
+    line-height: 1.75;
+  }
+
+  .rp-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+  }
+
+  .rp-card {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    padding: 0.85rem 1rem;
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    background: var(--bg0);
+    flex-wrap: wrap;
+  }
+
+  .rp-icon {
+    flex: none;
+    display: grid;
+    place-items: center;
+  }
+
+  .rp-icon :global(.icon) {
+    border-radius: 6px;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .rp-info {
+    flex: 1;
+    min-width: 11rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.12rem;
+  }
+
+  .rp-info b {
+    font-family: var(--font-display);
+    font-weight: 640;
+    font-size: 0.98rem;
+  }
+
+  .rp-info span {
+    font-size: 0.76rem;
+    color: var(--ink3);
+    line-height: 1.5;
+  }
+
+  .rp-ops {
+    display: flex;
+    gap: 0.4rem;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .rp-copy,
+  .rp-open {
+    padding: 0.36em 0.95em;
+    font-size: 0.8rem;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    color: var(--ink2);
+    background: var(--bg1);
+    white-space: nowrap;
+    transition: border-color 0.2s, color 0.2s, background-color 0.2s;
+  }
+
+  .rp-copy:hover,
+  .rp-open:hover {
+    border-color: var(--accent);
+    color: var(--accent-ink);
+    background: var(--wash);
+  }
+
+  .rp-copy.done {
+    border-color: var(--teal);
+    color: var(--teal);
+  }
+
+  .rp-foot {
+    margin-top: 1rem;
+    padding-top: 0.8rem;
+    border-top: 1px dashed var(--line);
+    font-size: 0.8rem;
+    color: var(--ink3);
+  }
+
+  .rp-md {
+    font-size: 0.8rem;
+    color: var(--accent-ink);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+</style>
+
+<script>
+  // ---------- 内容生成 ----------
+  function articleClone(): HTMLElement | null {
+    const body = document.querySelector('.post-body');
+    if (!body) return null;
+    const clone = body.cloneNode(true) as HTMLElement;
+    // 代码块的复制工具条（运行时注入）不进导出内容
+    clone.querySelectorAll('.code-chrome').forEach((el) => el.remove());
+    // 图片相对路径 → 绝对路径（平台外链需要完整 URL）
+    clone.querySelectorAll('img').forEach((img) => {
+      const raw = img.getAttribute('src');
+      if (raw) img.setAttribute('src', new URL(raw, location.href).toString());
+    });
+    // 视频标签各平台粘贴后都会丢失，替换成链接
+    clone.querySelectorAll('video').forEach((v) => {
+      const raw =
+        v.getAttribute('src') ?? v.querySelector('source')?.getAttribute('src') ?? '';
+      const p = document.createElement('p');
+      const a = document.createElement('a');
+      a.href = new URL(raw, location.href).toString();
+      a.textContent = `▶ 视频：${a.href}`;
+      p.appendChild(a);
+      v.replaceWith(p);
+    });
+    return clone;
+  }
+
+  function bodyTextOf(clone: HTMLElement): string {
+    return (clone.innerText || clone.textContent || '')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+  }
+
+  // 公众号：剥离 class，逐标签写内联样式（微信编辑器只保留内联样式）
+  const WX_STYLES: Record<string, string> = {
+    h1: 'font-size:20px;font-weight:700;margin:24px 0 12px;letter-spacing:0.5px;',
+    h2: 'font-size:18px;font-weight:700;margin:22px 0 11px;border-bottom:1px solid #e3dac4;padding-bottom:6px;',
+    h3: 'font-size:16px;font-weight:700;margin:18px 0 9px;',
+    h4: 'font-size:15px;font-weight:700;margin:14px 0 8px;',
+    p: 'margin:0 0 14px;',
+    blockquote: 'margin:14px 0;padding:10px 14px;border-left:3px solid #b93a1a;background:#faf3ec;color:#665d4c;border-radius:0 6px 6px 0;',
+    pre: 'background:#f6f5f2;padding:12px 14px;border-radius:6px;overflow-x:auto;font-size:13px;line-height:1.7;white-space:pre-wrap;word-break:break-all;',
+    img: 'max-width:100%;border-radius:6px;',
+    table: 'border-collapse:collapse;width:100%;margin:14px 0;',
+    th: 'border:1px solid #ddd;padding:6px 12px;background:#f4e3d6;font-weight:700;',
+    td: 'border:1px solid #ddd;padding:6px 12px;',
+    ul: 'padding-left:1.4em;margin:0 0 14px;',
+    ol: 'padding-left:1.4em;margin:0 0 14px;',
+    li: 'margin:4px 0;',
+    hr: 'border:0;border-top:1px solid #e3dac4;margin:24px 0;',
+    a: 'color:#b93a1a;text-decoration:underline;',
+  };
+
+  function wechatHTML(): string | null {
+    const clone = articleClone();
+    if (!clone) return null;
+    for (const el of Array.from(clone.querySelectorAll('*'))) {
+      const tag = el.tagName.toLowerCase();
+      el.removeAttribute('class');
+      if (tag === 'code') {
+        if (el.parentElement?.tagName !== 'PRE') {
+          el.setAttribute(
+            'style',
+            'background:#f4e3d6;color:#96290d;padding:2px 6px;border-radius:4px;font-size:14px;',
+          );
+        }
+        continue;
+      }
+      const css = WX_STYLES[tag];
+      if (css) el.setAttribute('style', css);
+    }
+    clone.querySelectorAll('strong,b').forEach((el) => el.setAttribute('style', 'font-weight:700;'));
+    return (
+      `<section style="font-size:15px;color:#3f3f3f;line-height:1.9;letter-spacing:0.5px;">` +
+      clone.innerHTML +
+      `</section>`
+    );
+  }
+
+  function zhihuHTML(): string | null {
+    const clone = articleClone();
+    if (!clone) return null;
+    // 知乎编辑器接受基础 HTML 富文本；剥离 class 即可
+    clone.querySelectorAll('*').forEach((el) => el.removeAttribute('class'));
+    return clone.innerHTML;
+  }
+
+  function xhsText(title: string): string | null {
+    const clone = articleClone();
+    if (!clone) return null;
+    const text = bodyTextOf(clone);
+    // 小红书正文上限 1000 字，标题上限 20 字 —— 截断并提示
+    const clipped = text.length > 1000 ? text.slice(0, 1000) + '……' : text;
+    return `${title}\n\n${clipped}\n\n—— 转载自博客「拾集」，可搜索标题阅读原文`;
+  }
+
+  // ---------- 剪贴板 ----------
+  async function copyRich(html: string, plain: string) {
+    if (typeof ClipboardItem !== 'undefined' && navigator.clipboard?.write) {
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          'text/html': new Blob([html], { type: 'text/html' }),
+          'text/plain': new Blob([plain], { type: 'text/plain' }),
+        }),
+      ]);
+      return;
+    }
+    // 兼容回退：隐藏选区 + execCommand
+    const tmp = document.createElement('div');
+    tmp.contentEditable = 'true';
+    tmp.style.cssText = 'position:fixed;left:-9999px;top:0;opacity:0;';
+    tmp.innerHTML = html;
+    document.body.appendChild(tmp);
+    const range = document.createRange();
+    range.selectNodeContents(tmp);
+    const sel = getSelection()!;
+    sel.removeAllRanges();
+    sel.addRange(range);
+    const ok = document.execCommand('copy');
+    sel.removeAllRanges();
+    tmp.remove();
+    if (!ok) throw new Error('当前浏览器不支持复制富文本');
+  }
+
+  async function copyByPlatform(kind: string, dlg: HTMLDialogElement) {
+    const title = dlg.dataset.title ?? document.title;
+    const file = dlg.dataset.file ?? '';
+    const repo = dlg.dataset.repo ?? '';
+    switch (kind) {
+      case 'zhihu': {
+        const html = zhihuHTML();
+        if (!html) throw new Error('未找到文章内容');
+        const clone = articleClone()!;
+        await copyRich(html, bodyTextOf(clone));
+        break;
+      }
+      case 'wechat': {
+        const html = wechatHTML();
+        if (!html) throw new Error('未找到文章内容');
+        const clone = articleClone()!;
+        await copyRich(html, bodyTextOf(clone));
+        break;
+      }
+      case 'xhs': {
+        const text = xhsText(title);
+        if (!text) throw new Error('未找到文章内容');
+        await navigator.clipboard.writeText(text);
+        break;
+      }
+      case 'md': {
+        // raw.githubusercontent.com 在大陆网络常不可达，失败时回退 GitHub API（base64）
+        let text = '';
+        try {
+          const res = await fetch(
+            `https://raw.githubusercontent.com/${repo}/main/src/content/posts/${file}`,
+          );
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          text = await res.text();
+        } catch {
+          const res = await fetch(
+            `https://api.github.com/repos/${repo}/contents/src/content/posts/${file}?ref=main`,
+          );
+          if (!res.ok) throw new Error(`拉取源码失败：HTTP ${res.status}`);
+          const j = await res.json();
+          const bin = atob(String(j.content).replace(/\n/g, ''));
+          text = new TextDecoder().decode(Uint8Array.from(bin, (c) => c.charCodeAt(0)));
+        }
+        await navigator.clipboard.writeText(text);
+        break;
+      }
+    }
+  }
+
+  // ---------- 事件委托（软导航安全） ----------
+  document.addEventListener('click', (e) => {
+    const target = e.target as HTMLElement;
+    const dlg = document.getElementById('repost-dlg') as HTMLDialogElement | null;
+
+    const opener = target.closest('[data-repost-open]');
+    if (opener) {
+      e.preventDefault();
+      dlg?.showModal();
+      return;
+    }
+
+    if (target.closest('[data-rp-close]')) {
+      dlg?.close();
+      return;
+    }
+
+    if (dlg?.open && e.target === dlg) {
+      dlg.close();
+      return;
+    }
+
+    const copyBtn = target.closest<HTMLButtonElement>('[data-rp-copy]');
+    if (copyBtn) {
+      if (!dlg) return;
+      const original = copyBtn.textContent;
+      copyBtn.disabled = true;
+      copyBtn.textContent = '复制中…';
+      copyByPlatform(copyBtn.dataset.rpCopy!, dlg)
+        .then(() => {
+          copyBtn.textContent = '已复制 ✓';
+          copyBtn.classList.add('done');
+          setTimeout(() => {
+            copyBtn.textContent = original;
+            copyBtn.classList.remove('done');
+          }, 1800);
+        })
+        .catch((err) => {
+          copyBtn.textContent = '复制失败';
+          setTimeout(() => {
+            copyBtn.textContent = original;
+          }, 1800);
+          console.error('[repost]', err);
+        })
+        .finally(() => {
+          copyBtn.disabled = false;
+        });
+    }
+  });
+</script>

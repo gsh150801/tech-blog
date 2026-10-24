@@ -45,6 +45,9 @@ export const ICONS = {
   video: '<svg fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="6" width="13" height="12" rx="2.5"/><path d="m20.5 8.5-4 3.5 4 3.5v-7Z"/></svg>',
   table: '<svg fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="M3.5 9.5h17M12 4.5v15"/></svg>',
   'code-block': '<svg fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="m7.5 9.5 3.5 3-3.5 3"/><path d="M13 15.5h4"/></svg>',
+  send: '<svg fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path d="m4.5 11.6 15.2-6.6-5.4 15.2-3.1-6.4-6.7-2.2Z"/><path d="M19.7 5 11.2 13.8"/></svg>',
+  zhihu: `<svg width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="5.5" fill="#0084ff"/><text x="12" y="17.2" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei',sans-serif" font-size="12.5" font-weight="700" fill="#fff">知</text></svg>`,
+  wechat: `<svg width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="5.5" fill="#07c160"/><text x="12" y="15.2" text-anchor="middle" font-family="'PingFang SC','Microsoft YaHei',sans-serif" font-size="8.2" font-weight="700" fill="#fff">微信</text></svg>`,
 } as const;
 
 export type IconName = keyof typeof ICONS;

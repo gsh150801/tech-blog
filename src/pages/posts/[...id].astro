@@ -5,6 +5,7 @@ import Icon from '../../components/Icon.astro';
 import Toc from '../../components/Toc.astro';
 import SeriesBox from '../../components/SeriesBox.astro';
 import Giscus from '../../components/Giscus.astro';
+import RepostDialog from '../../components/RepostDialog.astro';
 import { SITE } from '../../config';
 import { withBase } from '../../utils/path';
 import { postUrl, readingTime, resolveSeries } from '../../utils/posts';
@@ -103,6 +104,10 @@ const editorUrl = `${withBase('/posts/editor/')}?file=${encodeURIComponent(rawFi
                 <Icon name="pen" size={14} />
                 编辑
               </a>
+              <button class="pm-btn" data-repost-open type="button" title="转发到小红书 / 公众号 / 知乎">
+                <Icon name="send" size={14} />
+                转发
+              </button>
               <button class="pm-btn" data-share type="button">
                 <Icon name="share" size={14} />
                 <span class="share-label">分享</span>
@@ -182,6 +187,8 @@ const editorUrl = `${withBase('/posts/editor/')}?file=${encodeURIComponent(rawFi
       </aside>
     </article>
   </div>
+
+  <RepostDialog title={post.data.title} file={rawFile} />
 </Base>
 
 <style>
