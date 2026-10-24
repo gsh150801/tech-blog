@@ -36,9 +36,9 @@ export const SITE = {
 export const GISCUS = {
   enabled: true,
   repo: 'gsh150801/tech-blog',
-  repoId: '', // 部署脚本会自动填充
+  repoId: 'R_kgDOT9x1nQ',
   category: 'Announcements',
-  categoryId: '', // 部署脚本会自动填充
+  categoryId: 'DIC_kwDOT9x1nc4DDvgg',
   mapping: 'pathname',
   reactionsEnabled: '1',
   inputPosition: 'top',
